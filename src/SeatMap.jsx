@@ -71,12 +71,7 @@ export default function SeatMap() {
 
             <button className="hover:bg-white/10 px-4 py-3 rounded-lg text-left transition flex items-center gap-3">
               <Bell className="w-5 h-5" />
-              <span>My Reservation / Notification</span>
-            </button>
-
-            <button className="hover:bg-white/10 px-4 py-3 rounded-lg text-left transition flex items-center gap-3">
-              <QrCode className="w-5 h-5" />
-              <span>Scan2seat Check-in</span>
+              <span>Notifications</span>
             </button>
 
             <button className="hover:bg-white/10 px-4 py-3 rounded-lg text-left transition flex items-center gap-3">
@@ -110,7 +105,7 @@ export default function SeatMap() {
 
             <h1 className="text-4xl font-bold mt-2">Seat Map</h1>
 
-            <p className="text-gray-500 mt-2">Find and reserve your preferred seat</p>
+            <p className="text-gray-500 mt-2">Find your preferred seat</p>
           </div>
 
           <div className="flex items-center gap-4 flex-shrink-0">
@@ -168,11 +163,6 @@ export default function SeatMap() {
           <div className="flex items-center gap-3">
             <div className="w-6 h-6 rounded bg-[#F1DADA]"></div>
             <span>Occupied</span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="w-6 h-6 rounded bg-[#ECE7CF]"></div>
-            <span>Reserved</span>
           </div>
 
           <div className="flex items-center gap-3">

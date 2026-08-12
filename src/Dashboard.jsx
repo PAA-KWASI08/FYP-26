@@ -24,88 +24,88 @@ export default function Dashboard() {
     <div className="h-screen bg-[#F5F5F5] flex overflow-hidden">
       {/* SIDEBAR */}
       <div
-        className="w-[240px] min-w-[240px] h-screen relative text-white flex flex-col justify-between p-4 bg-cover bg-center"
+        className="w-[180px] sm:w-[220px] lg:w-[240px] min-w-[180px] sm:min-w-[220px] lg:min-w-[240px] h-screen sticky top-0 relative text-white flex flex-col justify-between p-3 sm:p-4 bg-cover bg-center overflow-y-auto"
         style={{ backgroundImage: `url(${libraryImage})` }}
       >
         <div className="absolute inset-0 bg-[#140B63]/90" />
 
         <div className="relative z-10">
-          <div className="mb-8">
-            <div className="flex items-start gap-3">
-              <h1 className="text-5xl font-bold">SLM</h1>
+          <div className="mb-6 sm:mb-8">
+            <div className="flex items-start gap-2 sm:gap-3">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold">SLM</h1>
               <img
                 src={scan2seat}
                 alt="Scan2Seat"
-                className="w-[68px] h-[60px] rounded-full object-cover"
+                className="w-[54px] h-[48px] sm:w-[68px] sm:h-[60px] rounded-full object-cover"
               />
             </div>
 
-            <p className="mt-2 text-sm font-medium">Student library system</p>
-            <p className="text-sm font-medium text-white/70">Scan2Seat</p>
+            <p className="mt-2 text-xs sm:text-sm font-medium">Student library system</p>
+            <p className="text-xs sm:text-sm font-medium text-white/70">Scan2Seat</p>
 
-            <div className="mt-4 border-b border-white/20" />
+            <div className="mt-3 border-b border-white/20" />
           </div>
 
           <div className="flex flex-col gap-2">
-            <button className="bg-[#5B5FC7] px-4 py-3 rounded-lg text-left font-semibold flex items-center gap-3">
-              <Home className="w-5 h-5" />
+            <button className="bg-[#5B5FC7] px-3 py-2 rounded-lg text-left font-semibold flex items-center gap-2 text-sm">
+              <Home className="w-4 h-4" />
               <span>Dashboard</span>
             </button>
 
             <button
               onClick={() => navigate("/seatmap")}
-              className="hover:bg-white/10 px-4 py-3 rounded-lg text-left transition flex items-center gap-3"
+              className="hover:bg-white/10 px-3 py-2 rounded-lg text-left transition flex items-center gap-2 text-sm"
             >
-              <MapPin className="w-5 h-5" />
+              <MapPin className="w-4 h-4" />
               <span>Seat Map</span>
             </button>
 
-            <button className="hover:bg-white/10 px-4 py-3 rounded-lg text-left transition flex items-center gap-3">
-              <Bell className="w-5 h-5" />
+            <button className="hover:bg-white/10 px-3 py-2 rounded-lg text-left transition flex items-center gap-2 text-sm">
+              <Bell className="w-4 h-4" />
               <span>Notifications</span>
             </button>
 
-            <button className="hover:bg-white/10 px-4 py-3 rounded-lg text-left transition flex items-center gap-3">
-              <Clock3 className="w-5 h-5" />
+            <button className="hover:bg-white/10 px-3 py-2 rounded-lg text-left transition flex items-center gap-2 text-sm">
+              <Clock3 className="w-4 h-4" />
               <span>History</span>
             </button>
 
-            <button className="hover:bg-white/10 px-4 py-3 rounded-lg text-left transition flex items-center gap-3">
-              <HelpCircle className="w-5 h-5" />
+            <button className="hover:bg-white/10 px-3 py-2 rounded-lg text-left transition flex items-center gap-2 text-sm">
+              <HelpCircle className="w-4 h-4" />
               <span>Profile & Help</span>
             </button>
           </div>
         </div>
 
-        <button className="relative z-10 text-left hover:text-red-300 transition flex items-center gap-2">
+        <button className="relative z-10 mt-4 text-left hover:text-red-300 transition flex items-center gap-2 text-sm">
           <LogOut className="w-4 h-4" />
           <span>Logout</span>
         </button>
       </div>
 
       {/* MAIN CONTENT */}
-      <div className="flex-1 min-h-0 p-2.5 sm:p-3 overflow-hidden">
-        <div className="h-full flex flex-col overflow-hidden">
+      <div className="flex-1 h-full min-h-0 p-2.5 sm:p-3 overflow-y-auto">
+        <div className="h-full flex flex-col">
           {/* TOP BAR */}
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3">
             <div className="min-w-0 flex-1">
               <h2 className="text-[10px] uppercase tracking-[0.16em] text-[#140B63]">
                 Welcome Back,
               </h2>
 
-              <h1 className="text-2xl sm:text-3xl font-bold mt-1">Student 1</h1>
-              <p className="text-gray-500 text-sm">Student ID: 22259801</p>
+              <h1 className="text-3xl sm:text-4xl font-bold mt-1 truncate">Student 1</h1>
+              <p className="text-gray-500 text-base truncate">Student ID: 22259801</p>
             </div>
 
-            <div className="flex-none bg-[#EEEEEE] px-3 py-2 rounded-xl border w-[140px] md:w-[160px]">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#140B63] text-white flex items-center justify-center text-xs font-semibold">
+            <div className="flex-shrink-0 bg-[#EEEEEE] px-3 py-2 rounded-xl border w-full sm:w-[140px] md:w-[160px]">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 rounded-full bg-[#140B63] text-white flex items-center justify-center text-xs font-semibold flex-shrink-0">
                   S
                 </div>
 
-                <div>
-                  <h2 className="font-bold text-sm">Student 1</h2>
-                  <p className="text-gray-500 text-[11px]">22259801</p>
+                <div className="min-w-0">
+                  <h2 className="font-bold text-sm truncate">Student 1</h2>
+                  <p className="text-gray-500 text-[11px] truncate">22259801</p>
                 </div>
               </div>
             </div>
@@ -115,109 +115,121 @@ export default function Dashboard() {
 
           {/* STATS */}
           <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 items-stretch">
-            <div className="min-h-[84px] bg-white p-2 rounded-xl border">
-              <div className="flex items-start gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#DDE4DE] flex items-center justify-center">
+            <div className="min-h-[84px] bg-white p-2 rounded-xl border flex flex-col justify-between">
+              <div className="flex items-start gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-[#DDE4DE] flex items-center justify-center flex-shrink-0">
                   <Armchair className="w-4 h-4 text-[#140B63]" />
                 </div>
 
-                <div>
-                  <h1 className="text-xl font-bold">126</h1>
-                  <h2 className="font-bold text-sm">Available Seats</h2>
-                  <p className="text-gray-500 text-[10px]">Find a seat and get started</p>
+                <div className="min-w-0">
+                  <h1 className="text-2xl xl:text-3xl font-bold">126</h1>
+                  <h2 className="font-bold text-base xl:text-lg line-clamp-1">Available Seats</h2>
+                  <p className="text-gray-500 text-sm line-clamp-2">Find a seat and get started</p>
                 </div>
               </div>
             </div>
 
-            <div className="min-h-[84px] bg-white p-2 rounded-xl border">
-              <div className="flex items-start gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#F1DADA] flex items-center justify-center">
+            <div className="min-h-[84px] bg-white p-2 rounded-xl border flex flex-col justify-between">
+              <div className="flex items-start gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-[#F1DADA] flex items-center justify-center flex-shrink-0">
                   <Users className="w-4 h-4 text-[#140B63]" />
                 </div>
 
-                <div>
-                  <h1 className="text-xl font-bold">74</h1>
-                  <h2 className="font-bold text-sm">Occupied Seats</h2>
-                  <p className="text-gray-500 text-[10px]">Currently in use</p>
+                <div className="min-w-0">
+                  <h1 className="text-2xl xl:text-3xl font-bold">74</h1>
+                  <h2 className="font-bold text-base xl:text-lg line-clamp-1">Occupied Seats</h2>
+                  <p className="text-gray-500 text-sm line-clamp-2">Currently in use</p>
                 </div>
               </div>
             </div>
 
-            <div className="min-h-[84px] bg-white p-2 rounded-xl border">
-              <div className="flex items-start gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#ECE7CF] flex items-center justify-center">
+            <div className="min-h-[84px] bg-white p-2 rounded-xl border flex flex-col justify-between">
+              <div className="flex items-start gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-[#ECE7CF] flex items-center justify-center flex-shrink-0">
                   <Clock3 className="w-4 h-4 text-[#140B63]" />
                 </div>
 
-                <div>
-                  <h1 className="text-xl font-bold">0 mins</h1>
-                  <h2 className="font-bold text-sm">Today's Study Time</h2>
-                  <p className="text-gray-500 text-[10px]">Keep up the great work!</p>
+                <div className="min-w-0">
+                  <h1 className="text-2xl xl:text-3xl font-bold">0 mins</h1>
+                  <h2 className="font-bold text-base xl:text-lg line-clamp-1">Today's Study Time</h2>
+                  <p className="text-gray-500 text-sm line-clamp-2">Keep up the great work!</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* QUICK ACTIONS + CURRENT SESSION */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-2 mt-2 flex-1 min-h-0">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-2 mt-2">
             {/* QUICK ACTIONS */}
-            <div className="bg-white p-2 rounded-xl border flex flex-col min-h-0 h-[230px]">
-              <h2 className="text-sm font-bold mb-2">Quick Actions</h2>
+            <div className="bg-white p-2 rounded-xl border flex flex-col">
+              <h2 className="text-base xl:text-lg font-bold mb-2 flex-shrink-0">Quick Actions</h2>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 auto-rows-fr flex-1 min-h-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 auto-rows-max sm:auto-rows-fr">
                 <button
                   type="button"
                   onClick={() => navigate("/seatmap")}
-                  className="bg-[#E8ECE8] p-2 rounded-lg text-left transition hover:border hover:border-[#5B5FC7] h-full flex flex-col justify-between min-h-[70px]"
+                  className="bg-[#E8ECE8] p-2 rounded-lg text-left transition duration-200 ease-out border border-transparent hover:border-[#5B5FC7] hover:shadow-sm flex flex-col justify-between min-h-[70px] h-auto"
                 >
-                  <div>
-                    <h3 className="font-semibold text-sm">View Seat Map</h3>
-                    <p className="text-xs text-gray-500 mt-1">
-                      See available seats in real-time
-                    </p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-9 h-9 rounded-lg bg-white text-[#140B63] flex items-center justify-center shadow-sm">
+                      <MapPin className="w-4 h-4" />
+                    </div>
+                    <h3 className="font-semibold text-base xl:text-lg line-clamp-1">View Seat Map</h3>
                   </div>
+                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                    See available seats in real-time
+                  </p>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setIsCheckedIn(true)}
-                  className="bg-[#F0E8E8] p-2 rounded-lg text-left transition hover:border hover:border-[#5B5FC7] h-full flex flex-col justify-between min-h-[70px]"
+                  className="bg-[#F0E8E8] p-2 rounded-lg text-left transition duration-200 ease-out border border-transparent hover:border-[#5B5FC7] hover:shadow-sm flex flex-col justify-between min-h-[70px] h-auto"
                 >
-                  <div>
-                    <h3 className="font-semibold text-sm">Check In</h3>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Scan or enter QR code number at your seat to begin
-                    </p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-9 h-9 rounded-lg bg-white text-[#140B63] flex items-center justify-center shadow-sm">
+                      <QrCode className="w-4 h-4" />
+                    </div>
+                    <h3 className="font-semibold text-base xl:text-lg line-clamp-1">Check In</h3>
                   </div>
+                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                    Scan or enter QR code number at your seat to begin
+                  </p>
                 </button>
 
-                <button className="bg-[#EFEDE4] p-2 rounded-lg text-left transition hover:border hover:border-[#5B5FC7] h-full flex flex-col justify-between min-h-[70px]">
-                  <div>
-                    <h3 className="font-semibold text-sm">My Sessions</h3>
-                    <p className="text-xs text-gray-500 mt-1">
-                      View your session history and logs
-                    </p>
+                <button className="bg-[#EFEDE4] p-2 rounded-lg text-left transition duration-200 ease-out border border-transparent hover:border-[#5B5FC7] hover:shadow-sm flex flex-col justify-between min-h-[70px] h-auto">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-9 h-9 rounded-lg bg-white text-[#140B63] flex items-center justify-center shadow-sm">
+                      <Users className="w-4 h-4" />
+                    </div>
+                    <h3 className="font-semibold text-base xl:text-lg line-clamp-1">My Sessions</h3>
                   </div>
+                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                    View your session history and logs
+                  </p>
                 </button>
 
-                <button className="bg-[#E7E6EC] p-2 rounded-lg text-left transition hover:border hover:border-[#5B5FC7] h-full flex flex-col justify-between min-h-[70px]">
-                  <div>
-                    <h3 className="font-semibold text-sm">Study History</h3>
-                    <p className="text-xs text-gray-500 mt-1">
-                      View your past library metrics
-                    </p>
+                <button className="bg-[#E7E6EC] p-2 rounded-lg text-left transition duration-200 ease-out border border-transparent hover:border-[#5B5FC7] hover:shadow-sm flex flex-col justify-between min-h-[70px] h-auto">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-9 h-9 rounded-lg bg-white text-[#140B63] flex items-center justify-center shadow-sm">
+                      <Clock3 className="w-4 h-4" />
+                    </div>
+                    <h3 className="font-semibold text-base xl:text-lg line-clamp-1">Study History</h3>
                   </div>
+                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                    View your past library metrics
+                  </p>
                 </button>
               </div>
             </div>
 
             {/* CURRENT SESSION */}
-            <div className="bg-white p-2 rounded-xl border flex flex-col min-h-0 h-[230px]">
-              <div className="flex items-center justify-between pb-1">
-                <h2 className="text-sm font-bold">My Current Session</h2>
+            <div className="bg-white p-2 rounded-xl border flex flex-col">
+              <div className="flex items-center justify-between pb-1 gap-2 flex-shrink-0">
+                <h2 className="text-base xl:text-lg font-bold truncate">My Current Session</h2>
 
                 <span
-                  className={`${isCheckedIn ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-500"} px-2 py-1 rounded-full text-[11px] font-semibold`}
+                  className={`${isCheckedIn ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-500"} px-2 py-1 rounded-full text-[11px] font-semibold flex-shrink-0`}
                 >
                   {isCheckedIn ? "Active" : "Inactive"}
                 </span>
@@ -226,13 +238,13 @@ export default function Dashboard() {
               {isCheckedIn ? (
                 <div className="space-y-2 mt-2 flex-1 flex flex-col justify-between">
                   <div className="rounded-xl bg-[#E7F8E9] p-2 border border-emerald-200">
-                    <p className="text-sm font-semibold text-emerald-700">Seat: B2-14</p>
-                    <p className="text-[11px] text-gray-600">Main Library · second floor</p>
+                    <p className="text-base font-semibold text-emerald-700">Seat: B2-14</p>
+                    <p className="text-sm text-gray-600">Main Library · second floor</p>
                   </div>
 
                   <div className="rounded-xl bg-[#F8FAFC] p-2 border border-[#E5E8E5]">
-                    <p className="text-[11px] text-gray-500">Time Elapsed</p>
-                    <p className="text-sm font-semibold text-[#140B63]">2h 50mins</p>
+                    <p className="text-sm text-gray-500">Time Elapsed</p>
+                    <p className="text-base font-semibold text-[#140B63]">2h 50mins</p>
                   </div>
 
                   <button
@@ -263,33 +275,32 @@ export default function Dashboard() {
           {/* ANNOUNCEMENTS */}
           <div className="bg-white p-2 rounded-xl border mt-2">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-bold">Library Announcements</h2>
+              <h2 className="text-base xl:text-lg font-bold">Library Announcements</h2>
               <button className="text-[#140B63] font-semibold text-[11px] hover:underline">
                 View all
               </button>
             </div>
 
             <div className="grid gap-2 sm:grid-cols-3">
-              <div className="flex items-start gap-2 rounded-xl border border-[#E5E8E5] p-2 bg-[#F8FAFC]">
-                <div className="w-8 h-8 rounded-xl bg-[#F0EEF8] flex items-center justify-center text-[#4C3D9A]">
+              <div className="flex items-start gap-2 rounded-xl border border-[#E5E8E5] p-2 bg-[#F8FAFC] min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-[#F0EEF8] flex items-center justify-center text-[#4C3D9A] flex-shrink-0">
                   <Info className="w-4 h-4" />
                 </div>
-                <p className="font-semibold text-[11px]">Group study rooms are offline for maintenance.</p>
+                <p className="font-semibold text-sm xl:text-base line-clamp-3">Group study rooms are offline for maintenance.</p>
               </div>
 
-              <div className="flex items-start gap-2 rounded-xl border border-[#E5E8E5] p-2 bg-[#F8FAFC]">
-                <div className="w-8 h-8 rounded-xl bg-[#F0EEF8] flex items-center justify-center text-[#4C3D9A]">
+              <div className="flex items-start gap-2 rounded-xl border border-[#E5E8E5] p-2 bg-[#F8FAFC] min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-[#F0EEF8] flex items-center justify-center text-[#4C3D9A] flex-shrink-0">
                   <AlertTriangle className="w-4 h-4" />
                 </div>
-                <p className="font-semibold text-[11px]">Silent study area rules are active.</p>
+                <p className="font-semibold text-sm xl:text-base line-clamp-3">Silent study area rules are active.</p>
               </div>
 
-              <div className="flex items-start gap-2 rounded-xl border border-[#E5E8E5] p-2 bg-[#F8FAFC]">
-                <div className="w-8 h-8 rounded-xl bg-[#F0EEF8] flex items-center justify-center text-[#4C3D9A]">
+              <div className="flex items-start gap-2 rounded-xl border border-[#E5E8E5] p-2 bg-[#F8FAFC] min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-[#F0EEF8] flex items-center justify-center text-[#4C3D9A] flex-shrink-0">
                   <Clock3 className="w-4 h-4" />
                 </div>
-                <p className="font-semibold text-[11px]">Exam hours are active until 10:00 PM.</p>
-              </div>
+                <p className="font-semibold text-sm xl:text-base line-clamp-3">Exam hours are active until 10:00 PM.</p>              </div>
             </div>
           </div>
         </div>

@@ -30,7 +30,7 @@ export default function SeatMap() {
     <div className="h-screen bg-[#F5F5F5] flex overflow-hidden">
       {/* SIDEBAR */}
       <div
-        className="w-[180px] sm:w-[220px] lg:w-[240px] min-w-[180px] sm:min-w-[220px] lg:min-w-[240px] h-screen relative text-white flex flex-col justify-between p-3 sm:p-4 bg-cover bg-center"
+        className="w-[180px] sm:w-[220px] lg:w-[240px] min-w-[180px] sm:min-w-[220px] lg:min-w-[240px] h-screen sticky top-0 relative text-white flex flex-col justify-between p-3 sm:p-4 bg-cover bg-center overflow-y-auto"
         style={{ backgroundImage: `url(${libraryImage})` }}
       >
         <div className="absolute inset-0 bg-[#140B63]/90" />
@@ -90,31 +90,31 @@ export default function SeatMap() {
       </div>
 
       {/* MAIN CONTENT */}
-      <div className="flex-1 min-h-0 p-2.5 sm:p-3 overflow-hidden">
-        <div className="h-full flex flex-col overflow-hidden">
+      <div className="flex-1 h-full min-h-0 p-2.5 sm:p-3 overflow-y-auto">
+        <div className="h-full flex flex-col">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h2 className="text-[10px] uppercase tracking-[0.16em] text-[#140B63]">
                 Welcome Back,
               </h2>
 
-              <h1 className="text-2xl sm:text-3xl font-bold mt-1">Seat Map</h1>
-              <p className="text-gray-500 text-sm">Find your preferred seat</p>
+              <h1 className="text-2xl sm:text-3xl font-bold mt-1 truncate">Seat Map</h1>
+              <p className="text-gray-500 text-sm truncate">Find your preferred seat</p>
             </div>
 
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <button className="border px-3 py-2 rounded-md text-[#5B5FC7] font-medium hover:bg-[#F2F2FF] transition text-sm">
+            <div className="flex items-center gap-2 flex-shrink-0 min-w-0 sm:min-w-fit">
+              <button className="border px-3 py-2 rounded-md text-[#5B5FC7] font-medium hover:bg-[#F2F2FF] transition text-sm whitespace-nowrap">
                 How it works
               </button>
 
-              <div className="bg-[#EEEEEE] rounded-md p-2 border">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[#140B63] text-white flex items-center justify-center text-sm font-semibold">
+              <div className="bg-[#EEEEEE] rounded-md p-2 border flex-shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 rounded-full bg-[#140B63] text-white flex items-center justify-center text-sm font-semibold flex-shrink-0">
                     S
                   </div>
-                  <div>
-                    <h2 className="font-bold text-sm">Student 1</h2>
-                    <p className="text-gray-500 text-[11px]">22259801</p>
+                  <div className="hidden sm:block">
+                    <h2 className="font-bold text-sm truncate">Student 1</h2>
+                    <p className="text-gray-500 text-[11px] truncate">22259801</p>
                   </div>
                 </div>
               </div>
@@ -124,49 +124,49 @@ export default function SeatMap() {
           <div className="mt-2 border-b border-black/30" />
 
           <div className="mt-2 flex-1 overflow-y-auto pr-1">
-            <div className="bg-white rounded-xl border p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-2">
+            <div className="bg-white rounded-xl border p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-2 flex-wrap">
               <input
                 type="text"
                 placeholder="Search seat number..."
-                className="border rounded-lg px-3 h-[40px] w-full sm:w-[240px] outline-none"
+                className="border rounded-lg px-3 h-[40px] flex-1 sm:flex-initial sm:w-[240px] outline-none min-w-[150px]"
               />
 
-              <select className="border rounded-lg px-3 h-[40px] w-full sm:w-[180px] outline-none">
+              <select className="border rounded-lg px-3 h-[40px] flex-1 sm:flex-initial sm:w-[180px] outline-none min-w-[150px]">
                 <option>Ground Floor</option>
                 <option>First Floor</option>
               </select>
 
-              <button className="border rounded-lg px-4 h-[40px] hover:bg-[#F5F5F5] transition w-full sm:w-auto">
+              <button className="border rounded-lg px-4 h-[40px] hover:bg-[#F5F5F5] transition flex-1 sm:flex-initial sm:w-auto min-w-[150px] whitespace-nowrap">
                 Reset Filter
               </button>
             </div>
 
-            <div className="bg-white rounded-xl border mt-2 p-3 sm:p-4 flex flex-wrap gap-3 sm:gap-4">
+            <div className="bg-white rounded-xl border mt-2 p-3 sm:p-4 flex flex-wrap gap-2 sm:gap-3 lg:gap-4">
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded bg-[#DDE4DE]" />
+                <div className="w-5 h-5 rounded bg-[#DDE4DE] flex-shrink-0" />
                 <span className="text-sm">Available</span>
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded bg-[#F1DADA]" />
+                <div className="w-5 h-5 rounded bg-[#F1DADA] flex-shrink-0" />
                 <span className="text-sm">Occupied</span>
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded bg-[#ECE7CF]" />
+                <div className="w-5 h-5 rounded bg-[#ECE7CF] flex-shrink-0" />
                 <span className="text-sm">Reserved</span>
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded bg-[#5B5FC7]" />
+                <div className="w-5 h-5 rounded bg-[#5B5FC7] flex-shrink-0" />
                 <span className="text-sm">Selected</span>
               </div>
             </div>
 
             <div className="bg-white rounded-xl border mt-2 p-3 sm:p-4">
-              <h2 className="text-center text-lg sm:text-xl font-bold mb-4">Silent Zone</h2>
+              <h2 className="text-center text-lg sm:text-xl font-bold mb-4 truncate">Silent Zone</h2>
 
-              <div className="flex flex-wrap justify-center gap-2 sm:gap-2.5">
+              <div className="flex flex-wrap justify-center gap-1 sm:gap-2 sm:gap-2.5">
                 {seats.flat().map((seat) => {
                   let bgColor = "bg-[#DDE4DE]";
 
@@ -181,7 +181,7 @@ export default function SeatMap() {
                   return (
                     <button
                       key={seat}
-                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg font-semibold transition hover:scale-105 ${bgColor}`}
+                      className={`w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-lg text-xs sm:text-sm font-semibold transition hover:scale-105 ${bgColor}`}
                     >
                       {seat}
                     </button>
@@ -189,7 +189,7 @@ export default function SeatMap() {
                 })}
               </div>
 
-              <div className="mt-4 bg-[#EFEFEF] h-[50px] rounded-xl flex items-center justify-center text-gray-500 font-semibold text-sm">
+              <div className="mt-4 bg-[#EFEFEF] h-[50px] rounded-xl flex items-center justify-center text-gray-500 font-semibold text-sm truncate">
                 WALKWAY
               </div>
 

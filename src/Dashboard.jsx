@@ -13,18 +13,21 @@ import {
   QrCode,
   HelpCircle,
   LogOut,
+  Menu,
+  X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(true);
 
   return (
     <div className="h-screen bg-[#F5F5F5] flex overflow-hidden">
       {/* SIDEBAR */}
       <div
-        className="w-[180px] sm:w-[220px] lg:w-[240px] min-w-[180px] sm:min-w-[220px] lg:min-w-[240px] h-screen sticky top-0 relative text-white flex flex-col justify-between p-3 sm:p-4 bg-cover bg-center overflow-y-auto"
+        className={`${sidebarVisible ? "flex" : "hidden"} w-[180px] sm:w-[220px] lg:w-[240px] min-w-[180px] sm:min-w-[220px] lg:min-w-[240px] h-screen sticky top-0 relative text-white flex flex-col justify-between p-3 sm:p-4 bg-cover bg-center overflow-y-auto`}
         style={{ backgroundImage: `url(${libraryImage})` }}
       >
         <div className="absolute inset-0 bg-[#140B63]/90" />
@@ -33,6 +36,14 @@ export default function Dashboard() {
           <div className="mb-6 sm:mb-8">
             <div className="flex items-start gap-2 sm:gap-3">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold">SLM</h1>
+              <button
+                type="button"
+                onClick={() => setSidebarVisible(!sidebarVisible)}
+                title={sidebarVisible ? "Hide sidebar" : "Show sidebar"}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white transition hover:bg-white/20"
+              >
+                {sidebarVisible ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              </button>
               <img
                 src={scan2seat}
                 alt="Scan2Seat"
@@ -93,8 +104,8 @@ export default function Dashboard() {
                 Welcome Back,
               </h2>
 
-              <h1 className="text-3xl sm:text-4xl font-bold mt-1 truncate">Student 1</h1>
-              <p className="text-gray-500 text-base truncate">Student ID: 22259801</p>
+              <h1 className="text-3xl sm:text-4xl font-bold mt-1 truncate" title="Student 1">Student 1</h1>
+              <p className="text-gray-500 text-base truncate" title="Student ID: 22259801">Student ID: 22259801</p>
             </div>
 
             <div className="flex-shrink-0 bg-[#EEEEEE] px-3 py-2 rounded-xl border w-full sm:w-[140px] md:w-[160px]">
@@ -104,8 +115,8 @@ export default function Dashboard() {
                 </div>
 
                 <div className="min-w-0">
-                  <h2 className="font-bold text-sm truncate">Student 1</h2>
-                  <p className="text-gray-500 text-[11px] truncate">22259801</p>
+                  <h2 className="font-bold text-sm truncate" title="Student 1">Student 1</h2>
+                  <p className="text-gray-500 text-[11px] truncate" title="22259801">22259801</p>
                 </div>
               </div>
             </div>
@@ -226,7 +237,7 @@ export default function Dashboard() {
             {/* CURRENT SESSION */}
             <div className="bg-white p-2 rounded-xl border flex flex-col">
               <div className="flex items-center justify-between pb-1 gap-2 flex-shrink-0">
-                <h2 className="text-base xl:text-lg font-bold truncate">My Current Session</h2>
+                <h2 className="text-base xl:text-lg font-bold truncate" title="My Current Session">My Current Session</h2>
 
                 <span
                   className={`${isCheckedIn ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-500"} px-2 py-1 rounded-full text-[11px] font-semibold flex-shrink-0`}

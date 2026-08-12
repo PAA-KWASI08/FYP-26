@@ -1,5 +1,6 @@
 import libraryImage from "./assets/images/balme-library.jpg";
 import scan2seat from "./assets/images/scan2seat.png";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Home,
@@ -8,10 +9,13 @@ import {
   Clock3,
   HelpCircle,
   LogOut,
+  Menu,
+  X,
 } from "lucide-react";
 
 export default function SeatMap() {
   const navigate = useNavigate();
+  const [sidebarVisible, setSidebarVisible] = useState(true);
 
   const seats = [
     ["A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9", "A10"],
@@ -30,7 +34,7 @@ export default function SeatMap() {
     <div className="h-screen bg-[#F5F5F5] flex overflow-hidden">
       {/* SIDEBAR */}
       <div
-        className="w-[180px] sm:w-[220px] lg:w-[240px] min-w-[180px] sm:min-w-[220px] lg:min-w-[240px] h-screen sticky top-0 relative text-white flex flex-col justify-between p-3 sm:p-4 bg-cover bg-center overflow-y-auto"
+        className={`${sidebarVisible ? "flex" : "hidden"} w-[180px] sm:w-[220px] lg:w-[240px] min-w-[180px] sm:min-w-[220px] lg:min-w-[240px] h-screen sticky top-0 relative text-white flex flex-col justify-between p-3 sm:p-4 bg-cover bg-center overflow-y-auto`}
         style={{ backgroundImage: `url(${libraryImage})` }}
       >
         <div className="absolute inset-0 bg-[#140B63]/90" />
@@ -39,11 +43,20 @@ export default function SeatMap() {
           <div className="mb-6 sm:mb-8">
             <div className="flex items-start gap-2 sm:gap-3">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold">SLM</h1>
+              <button
+                type="button"
+                onClick={() => setSidebarVisible(!sidebarVisible)}
+                title={sidebarVisible ? "Hide sidebar" : "Show sidebar"}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white transition hover:bg-white/20"
+              >
+                {sidebarVisible ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              </button>
               <img
                 src={scan2seat}
                 alt="Scan2Seat"
                 className="w-[54px] h-[48px] sm:w-[68px] sm:h-[60px] rounded-full object-cover"
               />
+
             </div>
 
             <p className="mt-2 text-xs sm:text-sm font-medium">Student library system</p>
@@ -98,8 +111,8 @@ export default function SeatMap() {
                 Welcome Back,
               </h2>
 
-              <h1 className="text-2xl sm:text-3xl font-bold mt-1 truncate">Seat Map</h1>
-              <p className="text-gray-500 text-sm truncate">Find your preferred seat</p>
+              <h1 className="text-2xl sm:text-3xl font-bold mt-1 truncate" title="Seat Map">Seat Map</h1>
+              <p className="text-gray-500 text-sm truncate" title="Find your preferred seat">Find your preferred seat</p>
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0 min-w-0 sm:min-w-fit">

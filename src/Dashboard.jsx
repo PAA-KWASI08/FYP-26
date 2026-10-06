@@ -34,16 +34,16 @@ export default function Dashboard() {
 
         <div className="relative z-10">
           <div className="mb-6 sm:mb-8">
-            <div className="flex items-start gap-2 sm:gap-3">
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold">SLM</h1>
+            <div className="flex items-center gap-2 sm:gap-3">
               <button
                 type="button"
                 onClick={() => setSidebarVisible(!sidebarVisible)}
                 title={sidebarVisible ? "Hide sidebar" : "Show sidebar"}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white transition hover:bg-white/20"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/30 bg-white/10 text-white transition hover:bg-white/20"
               >
-                {sidebarVisible ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+                <Menu className="w-4 h-4" />
               </button>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold">SLM</h1>
               <img
                 src={scan2seat}
                 alt="Scan2Seat"
@@ -72,7 +72,7 @@ export default function Dashboard() {
             </button>
 
             <button className="hover:bg-white/10 px-3 py-2 rounded-lg text-left transition flex items-center gap-2 text-sm">
-              <Bell className="w-4 h-4" />
+              <Becfdll className="w-4 h-4" />
               <span>Notifications</span>
             </button>
 
@@ -95,21 +95,39 @@ export default function Dashboard() {
       </div>
 
       {/* MAIN CONTENT */}
-      <div className="flex-1 h-full min-h-0 p-2.5 sm:p-3 overflow-y-auto">
-        <div className="h-full flex flex-col">
+      <div className="flex-1 h-full min-h-0 p-3 sm:p-4 pb-8 overflow-y-auto">
+        <div className="h-full flex flex-col gap-4">
           {/* TOP BAR */}
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3">
             <div className="min-w-0 flex-1">
-              <h2 className="text-[10px] uppercase tracking-[0.16em] text-[#140B63]">
-                Welcome Back,
-              </h2>
+              {!sidebarVisible && (
+                <div className="flex items-center gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setSidebarVisible(true)}
+                    title="Show sidebar"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-800 transition hover:bg-slate-50"
+                  >
+                    <Menu className="w-4 h-4" />
+                  </button>
+                  <h2 className="text-[10px] uppercase tracking-[0.16em] text-[#140B63]">
+                    Welcome Back,
+                  </h2>
+                </div>
+              )}
+
+              {sidebarVisible && (
+                <h2 className="text-[10px] uppercase tracking-[0.16em] text-[#140B63]">
+                  Welcome Back,
+                </h2>
+              )}
 
               <h1 className="text-3xl sm:text-4xl font-bold mt-1 truncate" title="Student 1">Student 1</h1>
               <p className="text-gray-500 text-base truncate" title="Student ID: 22259801">Student ID: 22259801</p>
             </div>
 
-            <div className="flex-shrink-0 bg-[#EEEEEE] px-3 py-2 rounded-xl border w-full sm:w-[140px] md:w-[160px]">
-              <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex-shrink-0 bg-[#EEEEEE] px-3 py-3 rounded-xl border w-full sm:w-[170px] md:w-[180px]">
+              <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-[#140B63] text-white flex items-center justify-center text-xs font-semibold flex-shrink-0">
                   S
                 </div>
@@ -122,7 +140,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="mt-2 border-b border-black/30" />
+          <div className="mt-2 border-b border-black/10" />
 
           {/* STATS */}
           <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 items-stretch">

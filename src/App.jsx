@@ -2,12 +2,21 @@ import libraryImage from "./assets/images/balme-library.jpg";
 import scan2seat from "./assets/images/scan2seat.png";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Check, Eye, EyeOff } from "lucide-react";
 
 export default function App() {
   const navigate = useNavigate();
   const [showPin, setShowPin] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
+  const [selectedRole, setSelectedRole] = useState("student");
+
+  const selectRole = (role) => {
+    setSelectedRole(role);
+
+    if (role === "admin") {
+      navigate("/admin");
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-row relative">
@@ -38,7 +47,47 @@ export default function App() {
         {/* FORM */}
         <div className="mt-8 flex flex-col gap-4 w-full max-w-md">
 
-             {/* STUDENT ID*/}
+          {/* ROLE SELECTOR */}
+          <div>
+            <div className="flex gap-2" role="group" aria-label="Choose login role">
+              <button
+                type="button"
+                aria-pressed={selectedRole === "student"}
+                onClick={() => selectRole("student")}
+                className={`flex-1 h-[40px] rounded border font-semibold transition inline-flex items-center justify-center gap-2 ${
+                  selectedRole === "student"
+                    ? "border-[#F47C5C] bg-[#F47C5C] text-white"
+                    : "border-white/40 bg-transparent text-white hover:bg-white/10"
+                }`}
+              >
+                <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${
+                  selectedRole === "student" ? "border-white bg-white text-[#F47C5C]" : "border-white/70"
+                }`}>
+                  {selectedRole === "student" && <Check size={13} aria-hidden="true" />}
+                </span>
+                Student
+              </button>
+              <button
+                type="button"
+                aria-pressed={selectedRole === "admin"}
+                onClick={() => selectRole("admin")}
+                className={`flex-1 h-[40px] rounded border font-semibold transition inline-flex items-center justify-center gap-2 ${
+                  selectedRole === "admin"
+                    ? "border-[#F47C5C] bg-[#F47C5C] text-white"
+                    : "border-white/40 bg-transparent text-white hover:bg-white/10"
+                }`}
+              >
+                <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${
+                  selectedRole === "admin" ? "border-white bg-white text-[#F47C5C]" : "border-white/70"
+                }`}>
+                  {selectedRole === "admin" && <Check size={13} aria-hidden="true" />}
+                </span>
+                Admin
+              </button>
+            </div>
+          </div>
+
+          {/* STUDENT ID*/}
           <input
             type="text"
             placeholder="Student ID (e.g. 22259801)"
@@ -75,7 +124,7 @@ export default function App() {
             hover:bg-[#f26d4d] border border-white/40
             rounded text-white font-semibold transition"
           >
-           🔒 Login
+           🔒 Log In
           </button>
           
            {/* FORGOT EMAIL/ID OR PIN*/}
@@ -182,22 +231,6 @@ export default function App() {
           </div>
           </div>
         )}
-
-          {/* OR */}
-          <div className="flex items-center">
-            <div className="flex-1 h-[2px] bg-white/40" />
-            <span className="mx-4 text-white/70 text-sm font-semibold">OR</span>
-            <div className="flex-1 h-[2px] bg-white/40" />
-          </div>
-
-          {/* ADMIN BUTTON */}
-          <button
-            onClick={() => navigate("/admin")}
-            className="w-full h-[45px] border border-white/40 bg-transparent
-            hover:bg-white/10 text-white font-semibold rounded transition"
-          >
-            🔒 Login as an Admin
-          </button>
 
         </div>
       </div>

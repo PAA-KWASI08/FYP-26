@@ -1,14 +1,26 @@
 import libraryImage from "./assets/images/balme-library.jpg";
 import scan2seat from "./assets/images/scan2seat.png";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "./useAuth";
 
 export default function App() {
   const navigate = useNavigate();
+  const { profile, loading: authLoading, signIn } = useAuth();
   const [showPin, setShowPin] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   const [selectedRole, setSelectedRole] = useState("student");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && profile) {
+      navigate(profile.role === "admin" ? "/admin/dashboard" : "/dashboard", { replace: true });
+    }
+  }, [authLoading, navigate, profile]);
 
   const selectRole = (role) => {
     setSelectedRole(role);
@@ -16,6 +28,18 @@ export default function App() {
     if (role === "admin") {
       navigate("/admin");
     }
+  };
+
+  const handleLogin = async () => {
+    setSubmitting(true);
+    setLoginError("");
+    const result = await signIn(email, password, "student");
+    setSubmitting(false);
+    if (!result.ok) {
+      setLoginError(result.message);
+      return;
+    }
+    navigate("/dashboard", { replace: true });
   };
 
   return (
@@ -87,27 +111,31 @@ export default function App() {
             </div>
           </div>
 
-          {/* STUDENT ID*/}
+          {/* STUDENT EMAIL */}
           <input
-            type="text"
-            placeholder="Student ID (e.g. 22259801)"
-            maxLength={8}
+            type="email"
+            placeholder="Student Email"
+            autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
             className="w-full h-[45px] px-4 rounded border border-white/40
             bg-[#B9D9EB]/20 text-white placeholder:text-white/50
             outline-none focus:border-[#F47C5C] transition"
           />
           <div className="relative w-full">
 
-            {/* PIN */}
+            {/* PASSWORD */}
           <input
             type={showPin ? "text" : "password"}
-            placeholder="PIN (5 digit password)"
-            maxLength={5}
+            placeholder="Password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
             className="w-full h-[45px] px-4 pr-12 rounded border border-white/40
             bg-[#B9D9EB]/20 text-white placeholder:text-white/50
             outline-none focus:border-[#F47C5C] transition"
           />
-             {/* PIN VISIBILITY ICON */}
+             {/* PASSWORD VISIBILITY ICON */}
            <button
            type="button"
            onClick={() => setShowPin(!showPin)}
@@ -119,20 +147,25 @@ export default function App() {
 
             {/* LOGIN */}
           <button
-            onClick={() => navigate("/dashboard")}
+            type="button"
+            onClick={handleLogin}
+            disabled={submitting || authLoading}
             className="w-full h-[45px] bg-[#F47C5C]
-            hover:bg-[#f26d4d] border border-white/40
+            hover:bg-[#f26d4d] disabled:cursor-wait disabled:opacity-70 border border-white/40
             rounded text-white font-semibold transition"
           >
-           🔒 Log In
+           {submitting ? "Signing In…" : "🔒 Log In"}
           </button>
+          {loginError && (
+            <p className="text-sm text-center text-white" role="alert">{loginError}</p>
+          )}
           
-           {/* FORGOT EMAIL/ID OR PIN*/}
+           {/* FORGOT EMAIL OR PASSWORD */}
           <p 
            onClick={() => setShowForgot(true)}
            className="text-sm text-white/70 text-center hover:text-white cursor-pointer"
            >
-            Forgot Email/ID or Pin?
+            Forgot email or password?
           </p>
             
           {/* POP UP FORM FOR FORGOT ID*/}

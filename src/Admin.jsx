@@ -1,12 +1,36 @@
 import libraryImage from "./assets/images/balme-library.jpg";
 import scan2seat from "./assets/images/scan2seat.png";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "./useAuth";
 
 export default function Admin() {
   const navigate = useNavigate();
+  const { profile, loading: authLoading, signIn } = useAuth();
   const [showPin, setShowPin] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && profile) {
+      navigate(profile.role === "admin" ? "/admin/dashboard" : "/dashboard", { replace: true });
+    }
+  }, [authLoading, navigate, profile]);
+
+  const handleLogin = async () => {
+    setSubmitting(true);
+    setLoginError("");
+    const result = await signIn(email, password, "admin");
+    setSubmitting(false);
+    if (!result.ok) {
+      setLoginError(result.message);
+      return;
+    }
+    navigate("/admin/dashboard", { replace: true });
+  };
 
   return (
     <div className="min-h-screen flex flex-row relative">
@@ -59,10 +83,13 @@ export default function Admin() {
             </button>
           </div>
 
-            {/* EMAIL/ID*/}
+            {/* ADMIN EMAIL */}
           <input
-            type="text"
-            placeholder="Admin Email/ID"
+            type="email"
+            placeholder="Admin Email"
+            autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
             className="w-full h-[45px] px-4 rounded border border-white/40
             bg-[#B9D9EB]/20 text-white placeholder:text-white/50
             outline-none focus:border-[#F47C5C] transition"
@@ -73,6 +100,9 @@ export default function Admin() {
           <input
             type={showPin ? "text" : "password"}
             placeholder="Password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
             className="w-full h-[45px] px-4 pr-12 rounded border border-white/40
             bg-[#B9D9EB]/20 text-white placeholder:text-white/50
             outline-none focus:border-[#F47C5C] transition"
@@ -90,11 +120,15 @@ export default function Admin() {
 
           <button
             type="button"
-            onClick={() => navigate("/admin/dashboard")}
+            onClick={handleLogin}
+            disabled={submitting || authLoading}
             className="w-full h-[45px] bg-[#F47C5C] hover:bg-[#f26d4d]
-            border border-white/40 rounded text-white font-semibold transition">
-            🔒 Admin Login
+            disabled:cursor-wait disabled:opacity-70 border border-white/40 rounded text-white font-semibold transition">
+            {submitting ? "Signing In…" : "🔒 Admin Login"}
           </button>
+          {loginError && (
+            <p className="text-sm text-center text-white" role="alert">{loginError}</p>
+          )}
 
         </div>
       </div>

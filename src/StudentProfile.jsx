@@ -1,7 +1,7 @@
 import { ArrowLeft, LockKeyhole } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getStudentInitials } from "./studentData";
-import { useStudentSession } from "./studentSession";
+import { useAuth } from "./useAuth";
 
 function ProfileField({ label, value }) {
   return (
@@ -14,8 +14,9 @@ function ProfileField({ label, value }) {
 
 export default function StudentProfile() {
   const navigate = useNavigate();
-  const { student } = useStudentSession();
-  const initials = getStudentInitials(student.fullName);
+  const { profile } = useAuth();
+  const initials = getStudentInitials(profile.full_name ?? "");
+  const display = (value) => value ?? "—";
 
   return (
     <div className="min-h-full w-full min-w-0 bg-[#F5F5F5] p-3 sm:p-4">
@@ -46,8 +47,8 @@ export default function StudentProfile() {
             {initials}
           </div>
           <div className="min-w-0">
-            <h2 className="text-xl font-bold text-[#140B63]">{student.fullName}</h2>
-            <p className="mt-1 text-sm text-gray-600">Student ID: {student.studentId}</p>
+            <h2 className="text-xl font-bold text-[#140B63]">{display(profile.full_name)}</h2>
+            <p className="mt-1 text-sm text-gray-600">Student ID: {display(profile.student_id)}</p>
           </div>
         </section>
 
@@ -58,20 +59,20 @@ export default function StudentProfile() {
         <section className="rounded-xl border border-[#DDE3F2] bg-[#FCFCFF] p-4 shadow-sm sm:p-5">
           <h2 className="text-lg font-bold text-[#140B63]">Personal Information</h2>
           <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <ProfileField label="Full Name" value={student.fullName} />
-            <ProfileField label="Student ID" value={student.studentId} />
-            <ProfileField label="Programme" value={student.programme} />
-            <ProfileField label="Department" value={student.department} />
-            <ProfileField label="Level" value={student.level} />
+            <ProfileField label="Full Name" value={display(profile.full_name)} />
+            <ProfileField label="Student ID" value={display(profile.student_id)} />
+            <ProfileField label="Programme" value={display(profile.programme)} />
+            <ProfileField label="Department" value={display(profile.department)} />
+            <ProfileField label="Level" value={display(profile.level)} />
           </dl>
         </section>
 
         <section className="rounded-xl border border-[#DDE3F2] bg-[#FCFCFF] p-4 shadow-sm sm:p-5">
           <h2 className="text-lg font-bold text-[#140B63]">Academic Information</h2>
           <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <ProfileField label="College/School" value={student.college} />
-            <ProfileField label="Email" value={student.email} />
-            <ProfileField label="Account Status" value={student.accountStatus} />
+            <ProfileField label="College/School" value={display(profile.college)} />
+            <ProfileField label="Email" value={display(profile.email)} />
+            <ProfileField label="Account Status" value={display(profile.account_status)} />
           </dl>
         </section>
       </div>

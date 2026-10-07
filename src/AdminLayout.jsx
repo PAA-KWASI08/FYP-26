@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import libraryImage from "./assets/images/balme-library.jpg";
 import scan2seat from "./assets/images/scan2seat.png";
+import { useAuth } from "./useAuth";
 
 const navigationItems = [
   { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard },
@@ -26,6 +27,7 @@ const navigationItems = [
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { signOut } = useAuth();
   const [expanded, setExpanded] = useState(() => window.matchMedia("(min-width: 768px)").matches);
 
   useEffect(() => {
@@ -36,6 +38,11 @@ export default function AdminLayout() {
     mediaQuery.addEventListener("change", updateForViewport);
     return () => mediaQuery.removeEventListener("change", updateForViewport);
   }, []);
+
+  const logout = async () => {
+    await signOut();
+    navigate("/", { replace: true });
+  };
 
   return (
     <div className="flex h-dvh w-full min-w-0 overflow-hidden bg-[#F5F5F5]">
@@ -109,7 +116,7 @@ export default function AdminLayout() {
           <div className={`mt-auto border-t border-white/15 pt-3 ${expanded ? "" : "w-full"}`}>
             <button
               type="button"
-              onClick={() => navigate("/")}
+              onClick={logout}
               aria-label="Logout"
               title={expanded ? undefined : "Logout"}
               className={`flex min-h-10 items-center rounded-lg text-sm text-white/85 transition hover:bg-white/10 hover:text-white ${

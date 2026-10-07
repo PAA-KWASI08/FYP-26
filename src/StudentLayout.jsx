@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   ChevronLeft,
@@ -15,6 +15,7 @@ import {
 import libraryImage from "./assets/images/balme-library.jpg";
 import scan2seat from "./assets/images/scan2seat.png";
 import { useStudentSession } from "./studentSession";
+import { useAuth } from "./useAuth";
 import AvailabilityReminder from "./AvailabilityReminder";
 
 const navigationItems = [
@@ -43,6 +44,8 @@ export default function StudentLayout() {
 
 function StudentLayoutFrame({ expanded, setExpanded }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [contentScrollTop, setContentScrollTop] = useState(0);
   const [warningDismissed, setWarningDismissed] = useState(false);
   const contentRef = useRef(null);
@@ -56,6 +59,10 @@ function StudentLayoutFrame({ expanded, setExpanded }) {
     clearCheckoutConfirmation,
   } = useStudentSession();
   const activeSessionVisible = ["/dashboard", "/check-in", "/my-sessions"].includes(location.pathname);
+  const logout = async () => {
+    await signOut();
+    navigate("/", { replace: true });
+  };
 
   useLayoutEffect(() => {
     if (!warningDismissed || !pendingScrollRestore.current) return;
@@ -169,15 +176,15 @@ function StudentLayoutFrame({ expanded, setExpanded }) {
           <div className={`mt-auto border-t border-white/15 pt-3 ${expanded ? "" : "w-full"}`}>
             <button
               type="button"
-              disabled
-              aria-label="Logout is not available in this prototype"
-              title={expanded ? undefined : "Logout unavailable"}
-              className={`flex min-h-10 cursor-not-allowed items-center rounded-lg text-sm text-white/55 ${
+              onClick={logout}
+              aria-label="Logout"
+              title={expanded ? undefined : "Logout"}
+              className={`flex min-h-10 items-center rounded-lg text-sm text-white/85 transition hover:bg-white/10 hover:text-white ${
                 expanded ? "w-full gap-3 px-3" : "mx-auto w-11 justify-center"
               }`}
             >
               <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
-              {expanded && <span>Logout unavailable</span>}
+              {expanded && <span>Logout</span>}
             </button>
           </div>
         </div>

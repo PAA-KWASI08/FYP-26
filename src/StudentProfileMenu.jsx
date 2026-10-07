@@ -2,14 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronDown, LogOut, UserRound } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getStudentInitials } from "./studentData";
-import { useStudentSession } from "./studentSession";
+import { useAuth } from "./useAuth";
 
 export default function StudentProfileMenu({ compact = false }) {
   const navigate = useNavigate();
-  const { student } = useStudentSession();
+  const { profile, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
-  const initials = getStudentInitials(student.fullName);
+  const initials = getStudentInitials(profile.full_name ?? "");
 
   useEffect(() => {
     if (!open) return undefined;
@@ -34,9 +34,10 @@ export default function StudentProfileMenu({ compact = false }) {
     navigate("/profile");
   };
 
-  const logout = () => {
+  const logout = async () => {
     setOpen(false);
-    navigate("/");
+    await signOut();
+    navigate("/", { replace: true });
   };
 
   return (
@@ -63,12 +64,12 @@ export default function StudentProfileMenu({ compact = false }) {
           {initials}
         </span>
         <span className={`min-w-0 flex-1 ${compact ? "hidden sm:block" : ""}`}>
-          <span className="block truncate text-sm font-bold text-[#140B63]" title={student.fullName}>
-            {student.fullName}
+          <span className="block truncate text-sm font-bold text-[#140B63]" title={profile.full_name}>
+            {profile.full_name}
           </span>
           {!compact && (
-            <span className="block truncate text-[11px] text-gray-500" title={student.studentId}>
-              {student.studentId}
+            <span className="block truncate text-[11px] text-gray-500" title={profile.student_id ?? ""}>
+              {profile.student_id ?? "—"}
             </span>
           )}
         </span>

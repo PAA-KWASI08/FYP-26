@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   Armchair,
+  Bell,
   ChevronLeft,
   ChevronRight,
   History,
@@ -16,6 +17,7 @@ import scan2seat from "./assets/images/scan2seat.png";
 const navigationItems = [
   { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard },
   { label: "Sections", to: "/admin/sections", icon: Library },
+  { label: "Notifications & Announcements", to: "/admin/notifications", icon: Bell },
   { label: "Seats", to: "/admin/seats", icon: Armchair },
   { label: "Active Sessions", to: "/admin/active-sessions", icon: UsersRound },
   { label: "Usage & Analytics", to: "/admin/usage-analytics", icon: History },

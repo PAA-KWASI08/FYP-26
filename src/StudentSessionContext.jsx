@@ -8,11 +8,7 @@ export function StudentSessionProvider({ children }) {
   const [sections, setSections] = useState(() =>
     initialSections.map((section) => ({
       ...section,
-      seats: section.seats.map((seat) => (
-        seat.status === "Occupied"
-          ? { ...seat, status: "Available", unavailableReason: null }
-          : { ...seat }
-      )),
+      seats: section.seats.map((seat) => ({ ...seat })),
     })),
   );
   const [session, setSession] = useState(null);

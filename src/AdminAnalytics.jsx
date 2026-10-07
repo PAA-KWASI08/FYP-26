@@ -603,15 +603,40 @@ export default function AdminAnalytics() {
         {topSection && topPeriod && enoughPeakData && <p className="mt-3 text-xs text-gray-600">{topSection.names[0]} has the highest section-level recorded check-ins ({topSection.count}) in this period; activity by time is shown above.</p>}
       </ChartCard>
 
-      <ChartCard title="Availability and Usage Comparison" description="Current status is a live in-memory seat snapshot. Recorded check-ins are historical events and are not simultaneous occupancy.">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          {[
-            ["Total Seats", availability.total],
-            ["Available Seats", availability.available],
-            ["Occupied Seats", availability.occupied],
-            ["Unavailable Seats", availability.unavailable],
-            ["Recorded Check-ins", noActivity ? "—" : records.length],
-          ].map(([label, value]) => <div key={label} className="rounded-lg border border-[#EEF0F5] bg-[#FCFCFF] p-3"><p className="text-lg font-bold text-[#140B63]">{value}</p><p className="mt-1 text-xs text-gray-500">{label}</p></div>)}
+      <ChartCard title="Section Usage Comparison" description="Compare current seat availability with recorded check-ins and completed sessions for each section. Historical counts reflect the selected filters and are not simultaneous occupancy.">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left text-xs">
+            <thead>
+              <tr className="border-b border-[#DDE3F2] text-gray-500">
+                <th className="py-2 pr-3 font-semibold">Section</th>
+                <th className="px-3 py-2 font-semibold">Total Seats</th>
+                <th className="px-3 py-2 font-semibold">Recorded Check-ins</th>
+                <th className="px-3 py-2 font-semibold">Completed Sessions</th>
+                <th className="px-3 py-2 font-semibold">Available</th>
+                <th className="px-3 py-2 font-semibold">Occupied</th>
+                <th className="px-3 py-2 font-semibold">Unavailable</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sectionRows.map((section) => {
+                const currentSeats = section.seats.reduce((counts, seat) => {
+                  counts[seat.status.toLocaleLowerCase()] += 1;
+                  return counts;
+                }, { available: 0, occupied: 0, unavailable: 0 });
+                return (
+                  <tr key={section.id} className="border-b border-[#EEF0F5] last:border-0">
+                    <th scope="row" className="py-3 pr-3 font-semibold text-[#140B63]">{section.name}</th>
+                    <td className="px-3 py-3">{section.seats.length}</td>
+                    <td className="px-3 py-3">{customRangeInvalid ? "—" : section.checkIns}</td>
+                    <td className="px-3 py-3">{customRangeInvalid ? "—" : section.completed}</td>
+                    <td className="px-3 py-3">{currentSeats.available}</td>
+                    <td className="px-3 py-3">{currentSeats.occupied}</td>
+                    <td className="px-3 py-3">{currentSeats.unavailable}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </ChartCard>
 

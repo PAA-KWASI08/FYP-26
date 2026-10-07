@@ -5,27 +5,37 @@ import {
   AlertTriangle,
   Clock3,
   Library,
-  Info,
   CircleHelp,
   CheckCircle2,
   History,
   QrCode,
   ChevronRight,
+  Bell,
 } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { getLibraryAvailability } from "./sections";
 import { useStudentSession } from "./studentSession";
 import ConfirmationDialog from "./ConfirmationDialog";
 import StudentProfileMenu from "./StudentProfileMenu";
+import { getActiveAnnouncements } from "./announcementData";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { sections, session, lastSession, checkout, currentStudentId, student } = useStudentSession();
+  const {
+    sections,
+    session,
+    lastSession,
+    checkout,
+    currentStudentId,
+    student,
+    announcements,
+  } = useStudentSession();
   const [now, setNow] = useState(() => Date.now());
   const [pendingCheckoutSession, setPendingCheckoutSession] = useState(null);
   const [checkoutError, setCheckoutError] = useState("");
   const availability = getLibraryAvailability(sections);
+  const latestAnnouncement = getActiveAnnouncements(announcements, session?.sectionId)[0];
 
   useEffect(() => {
     if (session?.sessionStatus !== "active") return undefined;
@@ -309,35 +319,29 @@ export default function Dashboard() {
           </div>
 
           {/* ANNOUNCEMENTS */}
-          <div className="dashboard-announcements bg-white p-2 rounded-xl border mt-2">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-base xl:text-lg font-bold">Library Announcements</h2>
-              <button className="text-[#140B63] font-semibold text-[11px] hover:underline">
-                View all
-              </button>
-            </div>
-
-            <div className="grid gap-2 sm:grid-cols-3">
-              <div className="flex items-start gap-2 rounded-xl border border-[#E5E8E5] p-2 bg-[#F8FAFC] min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-[#F0EEF8] flex items-center justify-center text-[#4C3D9A] flex-shrink-0">
-                  <Info className="w-4 h-4" />
-                </div>
-                <p className="font-semibold text-sm xl:text-base line-clamp-3">Group study rooms are offline for maintenance.</p>
+          <div className="dashboard-announcements mt-2 rounded-xl border border-[#DDE3F2] bg-white p-3 shadow-sm">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Bell className="h-4 w-4 text-[#4B4FA3]" aria-hidden="true" />
+                <h2 className="text-base font-bold xl:text-lg">Announcements</h2>
               </div>
-
-              <div className="flex items-start gap-2 rounded-xl border border-[#E5E8E5] p-2 bg-[#F8FAFC] min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-[#F0EEF8] flex items-center justify-center text-[#4C3D9A] flex-shrink-0">
-                  <AlertTriangle className="w-4 h-4" />
-                </div>
-                <p className="font-semibold text-sm xl:text-base line-clamp-3">Silent study area rules are active.</p>
-              </div>
-
-              <div className="flex items-start gap-2 rounded-xl border border-[#E5E8E5] p-2 bg-[#F8FAFC] min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-[#F0EEF8] flex items-center justify-center text-[#4C3D9A] flex-shrink-0">
-                  <Clock3 className="w-4 h-4" />
-                </div>
-                <p className="font-semibold text-sm xl:text-base line-clamp-3">Exam hours are active until 10:00 PM.</p>              </div>
+              <Link to={session?.sectionId ? `/notifications?section=${encodeURIComponent(session.sectionId)}` : "/notifications"} className="shrink-0 text-xs font-semibold text-[#140B63] hover:underline">
+                View All →
+              </Link>
             </div>
+            {latestAnnouncement ? (
+              <article className="rounded-lg border border-[#E5E9F3] bg-[#FCFCFF] p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="min-w-0 break-words text-sm font-semibold text-[#140B63]">{latestAnnouncement.title}</h3>
+                  <span className="rounded-full bg-[#EEF0FA] px-2 py-0.5 text-[10px] font-semibold text-[#4B4FA3]">{latestAnnouncement.type}</span>
+                </div>
+                <p className="mt-1 line-clamp-2 text-xs text-gray-600">{latestAnnouncement.message}</p>
+              </article>
+            ) : (
+              <p className="rounded-lg border border-dashed border-[#E5E9F3] px-3 py-3 text-xs text-gray-500">
+                No current announcements.
+              </p>
+            )}
           </div>
         </div>
       </div>

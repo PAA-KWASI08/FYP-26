@@ -9,6 +9,7 @@ import {
   Library,
   LogOut,
   BookOpen,
+  Bell,
   QrCode,
 } from "lucide-react";
 import libraryImage from "./assets/images/balme-library.jpg";
@@ -21,6 +22,7 @@ const navigationItems = [
   { label: "Sections", to: "/sections", icon: Library, key: "sections" },
   { label: "Check In", to: "/check-in", icon: QrCode, key: "check-in" },
   { label: "My Sessions", to: "/my-sessions", icon: BookOpen, key: "my-sessions" },
+  { label: "Announcements", to: "/notifications", icon: Bell, key: "notifications" },
   { label: "How It Works", to: "/how-it-works", icon: CircleHelp, key: "how-it-works" },
 ];
 

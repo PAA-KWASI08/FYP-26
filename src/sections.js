@@ -11,7 +11,9 @@ function createSeats(prefix, total, available, occupied, statusOverrides = {}) {
     return {
       id: `${prefix}-${seatNumber}`,
       seatCode,
+      qrIdentifier: seatCode,
       status,
+      unavailableReason: status === "Unavailable" ? "Maintenance" : null,
     };
   });
 }

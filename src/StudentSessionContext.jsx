@@ -2,18 +2,24 @@ import { useCallback, useState } from "react";
 import { sections as initialSections } from "./sections";
 import { mockStudent } from "./studentData";
 import { StudentSessionContext } from "./studentSession";
+import { initialAnnouncements } from "./announcementData";
 
 export function StudentSessionProvider({ children }) {
   const [sections, setSections] = useState(() =>
     initialSections.map((section) => ({
       ...section,
-      seats: section.seats.map((seat) => ({ ...seat })),
+      seats: section.seats.map((seat) => (
+        seat.status === "Occupied"
+          ? { ...seat, status: "Available", unavailableReason: null }
+          : { ...seat }
+      )),
     })),
   );
   const [session, setSession] = useState(null);
   const [completedSessions, setCompletedSessions] = useState([]);
   const [checkInConfirmation, setCheckInConfirmation] = useState(null);
   const [checkoutConfirmation, setCheckoutConfirmation] = useState(null);
+  const [announcements, setAnnouncements] = useState(() => initialAnnouncements.map((item) => ({ ...item })));
 
   const checkIn = (seatCode) => {
     if (session) {
@@ -57,6 +63,9 @@ export function StudentSessionProvider({ children }) {
       checkInTime,
       checkOutTime: null,
       sessionStatus: "active",
+      locationStatus: "Within Library",
+      locationStatusIsMock: true,
+      promptSentAt: null,
     };
     setSession(activeSession);
     setCheckInConfirmation(activeSession);
@@ -105,9 +114,112 @@ export function StudentSessionProvider({ children }) {
     setCheckoutConfirmation(null);
   }, []);
 
+  const setSectionStatus = useCallback((sectionId, status) => {
+    if (!["Open", "Closed"].includes(status)) {
+      return { ok: false, message: "The selected section status is not valid." };
+    }
+    if (!sections.some((section) => section.id === sectionId)) {
+      return { ok: false, message: "The selected section could not be found." };
+    }
+
+    setSections((currentSections) => currentSections.map((section) => (
+      section.id === sectionId ? { ...section, status } : section
+    )));
+    return { ok: true };
+  }, [sections]);
+
+  const setSeatAvailability = useCallback((sectionId, seatId, status, unavailableReason = null) => {
+    if (!["Available", "Unavailable"].includes(status)) {
+      return { ok: false, message: "Seats can only be marked Available or Unavailable here." };
+    }
+    const section = sections.find((item) => item.id === sectionId);
+    const seat = section?.seats.find((item) => item.id === seatId);
+    if (!section || !seat) {
+      return { ok: false, message: "The selected seat could not be found." };
+    }
+    if (seat.status === "Occupied" || (
+      session?.sessionStatus === "active"
+      && session.sectionId === sectionId
+      && session.seatId === seatId
+    )) {
+      return { ok: false, message: "Occupied seats must be managed through Active Sessions." };
+    }
+    if (status === "Unavailable" && !unavailableReason?.trim()) {
+      return { ok: false, message: "Provide a reason before marking the seat unavailable." };
+    }
+
+    setSections((currentSections) => currentSections.map((currentSection) => (
+      currentSection.id !== sectionId
+        ? currentSection
+        : {
+          ...currentSection,
+          seats: currentSection.seats.map((currentSeat) => (
+            currentSeat.id === seatId
+              ? {
+                ...currentSeat,
+                status,
+                unavailableReason: status === "Unavailable" ? unavailableReason.trim() : null,
+              }
+              : currentSeat
+          )),
+        }
+    )));
+    return { ok: true };
+  }, [sections, session]);
+
+  const promptStudent = useCallback((sessionId) => {
+    if (
+      !session
+      || session.sessionStatus !== "active"
+      || session.id !== sessionId
+    ) {
+      return { ok: false, message: "The active session could not be verified." };
+    }
+    setSession((currentSession) => (
+      currentSession?.id === sessionId
+        ? { ...currentSession, promptSentAt: new Date() }
+        : currentSession
+    ));
+    return { ok: true };
+  }, [session]);
+
+  const createAnnouncement = useCallback((announcement) => {
+    const createdAt = new Date().toISOString();
+    const createdAnnouncement = {
+      ...announcement,
+      id: `announcement-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      createdAt,
+    };
+    setAnnouncements((currentAnnouncements) => [createdAnnouncement, ...currentAnnouncements]);
+    return { ok: true, announcement: createdAnnouncement };
+  }, []);
+
+  const updateAnnouncement = useCallback((announcementId, updates) => {
+    if (!announcements.some((announcement) => announcement.id === announcementId)) {
+      return { ok: false, message: "The selected announcement could not be found." };
+    }
+    setAnnouncements((currentAnnouncements) => currentAnnouncements.map((announcement) => (
+      announcement.id === announcementId
+        ? { ...announcement, ...updates }
+        : announcement
+    )));
+    return { ok: true };
+  }, [announcements]);
+
+  const deleteAnnouncement = useCallback((announcementId) => {
+    if (!announcements.some((announcement) => announcement.id === announcementId)) {
+      return { ok: false, message: "The selected announcement could not be found." };
+    }
+    setAnnouncements((currentAnnouncements) => currentAnnouncements.filter(
+      (announcement) => announcement.id !== announcementId,
+    ));
+    return { ok: true };
+  }, [announcements]);
+
   return (
     <StudentSessionContext.Provider value={{
       sections,
+      announcements,
       student: mockStudent,
       currentStudentId: mockStudent.studentId,
       session,
@@ -117,6 +229,12 @@ export function StudentSessionProvider({ children }) {
       checkoutConfirmation,
       checkIn,
       checkout,
+      setSectionStatus,
+      setSeatAvailability,
+      promptStudent,
+      createAnnouncement,
+      updateAnnouncement,
+      deleteAnnouncement,
       clearCheckInConfirmation,
       clearCheckoutConfirmation,
     }}>

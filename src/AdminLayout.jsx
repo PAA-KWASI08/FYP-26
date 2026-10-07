@@ -18,7 +18,7 @@ const navigationItems = [
   { label: "Sections", to: "/admin/sections", icon: Library },
   { label: "Seats", to: "/admin/seats", icon: Armchair },
   { label: "Active Sessions", to: "/admin/active-sessions", icon: UsersRound },
-  { label: "Usage History", to: "/admin/usage-history", icon: History },
+  { label: "Usage & Analytics", to: "/admin/usage-analytics", icon: History },
 ];
 
 export default function AdminLayout() {

@@ -8,6 +8,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import AdminSectionStatus from "./AdminSectionStatus";
 import { getAdminOverview, formatAdminDuration, formatAdminTime } from "./adminData";
 import { useStudentSession } from "./studentSession";
 
@@ -26,7 +27,7 @@ const managementActions = [
   { label: "Manage Sections", to: "/admin/sections" },
   { label: "Manage Seats", to: "/admin/seats" },
   { label: "Active Sessions", to: "/admin/active-sessions" },
-  { label: "Usage History", to: "/admin/usage-history" },
+  { label: "Usage & Analytics", to: "/admin/usage-analytics" },
 ];
 
 function SectionCard({ section }) {
@@ -34,11 +35,7 @@ function SectionCard({ section }) {
     <article className="rounded-xl border border-[#DDE3F2] bg-white p-3 shadow-sm">
       <div className="flex items-start justify-between gap-2">
         <h3 className="min-w-0 text-sm font-bold text-[#140B63]">{section.name}</h3>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-          section.status === "Open" ? "bg-[#E8F2EE] text-[#315C4B]" : "bg-[#F1EEFA] text-[#51427C]"
-        }`}>
-          {section.status}
-        </span>
+        <AdminSectionStatus status={section.status} />
       </div>
       <p className="mt-1 text-xs text-gray-500">{section.total} total seats</p>
       <div className="mt-3 grid grid-cols-3 gap-2 border-t border-[#EEF0F5] pt-2 text-xs">

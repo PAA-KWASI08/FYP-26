@@ -47,8 +47,8 @@ export default function MySessions() {
   }, {});
   const mostUsedSection = Object.entries(sectionCounts).sort((first, second) => second[1] - first[1])[0]?.[0];
 
-  const confirmCheckout = () => {
-    const result = checkout(pendingCheckoutSession?.id, currentStudentId);
+  const confirmCheckout = async () => {
+    const result = await checkout(pendingCheckoutSession?.id, currentStudentId);
     if (!result.ok) setCheckoutError(result.message);
     setPendingCheckoutSession(null);
   };
@@ -158,7 +158,7 @@ export default function MySessions() {
         {completedSessions.length > 0 && (
           <section aria-label="Session analysis" className="grid grid-cols-2 gap-2 lg:grid-cols-4">
             <div className="rounded-xl border bg-white p-3">
-              <p className="text-xs text-gray-500">Completed sessions</p>
+              <p className="text-xs text-gray-500">Ended sessions</p>
               <p className="mt-1 text-xl font-bold text-[#140B63]">{completedSessions.length}</p>
             </div>
             <div className="rounded-xl border bg-white p-3">
@@ -196,8 +196,12 @@ export default function MySessions() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <h3 className="font-bold text-[#140B63]">{item.section}</h3>
-                        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800">
-                          Completed
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          item.releaseReason === "outside-geofence"
+                            ? "bg-amber-50 text-amber-800"
+                            : "bg-emerald-50 text-emerald-800"
+                        }`}>
+                          {item.releaseReason === "outside-geofence" ? "Seat released by admin" : "Completed"}
                         </span>
                       </div>
                       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm text-gray-600">

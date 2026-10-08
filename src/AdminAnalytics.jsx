@@ -7,11 +7,14 @@ import {
   Clock3,
   Download,
   Library,
+  Printer,
+  RefreshCw,
   Search,
   UsersRound,
 } from "lucide-react";
 import { formatAdminDuration } from "./adminData";
 import { getLibraryAvailability } from "./sections";
+import { getAdminStudentIssueReports } from "./lib/issueReportService";
 import { useStudentSession } from "./studentSession";
 
 const periods = ["Morning", "Afternoon", "Evening"];
@@ -48,6 +51,37 @@ function formatDateTime(value) {
       minute: "2-digit",
     }).format(date)
     : "—";
+}
+
+function formatExportDuration(minutes) {
+  if (minutes === null || minutes === undefined) return "Not recorded";
+  const totalMinutes = Math.max(0, Math.floor(minutes));
+  const hours = Math.floor(totalMinutes / 60);
+  const remainingMinutes = totalMinutes % 60;
+  return hours ? `${hours}h ${remainingMinutes}m` : `${remainingMinutes}m`;
+}
+
+function csvCell(value) {
+  let text = String(value ?? "");
+  if (/^[\s]*[=+\-@]/.test(text)) text = `'${text}`;
+  return `"${text.replaceAll('"', '""')}"`;
+}
+
+function downloadCsv(filename, rows) {
+  const csv = `\uFEFF${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}`;
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function filenamePart(value) {
+  return value.toLocaleLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "all-data";
 }
 
 function timePeriod(value) {
@@ -134,7 +168,7 @@ function StatCard({ label, value, note, icon: Icon }) {
       <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF0FA] text-[#343A78]">
         <Icon className="h-4 w-4" aria-hidden="true" />
       </span>
-      <p className="mt-3 break-words text-lg font-bold leading-tight text-[#140B63] sm:text-xl">{value}</p>
+      <p className="mt-3 break-words text-2xl font-bold leading-tight text-[#140B63] sm:text-3xl">{value}</p>
       <h3 className="mt-1 text-xs font-semibold text-gray-600">{label}</h3>
       {note && <p className="mt-1 text-[11px] text-gray-500">{note}</p>}
     </article>
@@ -230,7 +264,13 @@ function SessionDetails({ item, studentName, onClose }) {
 }
 
 export default function AdminAnalytics() {
-  const { sections, session, completedSessions, student } = useStudentSession();
+  const {
+    sections,
+    adminSessions,
+    adminSessionsError,
+    adminSessionsLoading,
+    catalogSyncError,
+  } = useStudentSession();
   const [now, setNow] = useState(() => new Date());
   const [dateOption, setDateOption] = useState("All recorded data");
   const [customStart, setCustomStart] = useState("");
@@ -241,34 +281,62 @@ export default function AdminAnalytics() {
   const [reportYear, setReportYear] = useState("");
   const [reportPeriod, setReportPeriod] = useState("All recorded data");
   const [selectedSessionId, setSelectedSessionId] = useState(null);
+  const [exportError, setExportError] = useState("");
+  const [issueReports, setIssueReports] = useState([]);
+  const [issueReportsLoading, setIssueReportsLoading] = useState(true);
+  const [issueReportsError, setIssueReportsError] = useState("");
+  const [issueReportRefresh, setIssueReportRefresh] = useState(0);
 
   useEffect(() => {
-    if (session?.sessionStatus !== "active") return undefined;
     const timer = window.setInterval(() => setNow(new Date()), 30000);
     return () => window.clearInterval(timer);
-  }, [session?.id, session?.sessionStatus]);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadIssueReports = async () => {
+      try {
+        const result = await getAdminStudentIssueReports();
+        if (cancelled) return;
+        if (result.error) {
+          console.error("Unable to load student issue reports:", result.error.message);
+          setIssueReportsError("Student issue reports could not be loaded. Apply the issue-report database migration and try again.");
+          return;
+        }
+        setIssueReports(result.data ?? []);
+        setIssueReportsError("");
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Unable to request student issue reports:", error);
+          setIssueReportsError("Student issue reports could not be loaded. Check the connection and try again.");
+        }
+      } finally {
+        if (!cancelled) setIssueReportsLoading(false);
+      }
+    };
+    void loadIssueReports();
+    const timer = window.setInterval(() => void loadIssueReports(), 30000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [issueReportRefresh]);
 
   const allRecords = useMemo(() => {
-    const completed = completedSessions
-      .filter((item) => (item.status ?? item.sessionStatus)?.toLowerCase() === "completed")
-      .map((item) => ({ ...item, sessionStatus: "completed" }));
-    const all = session?.sessionStatus === "active" ? [session, ...completed] : completed;
-    return all.flatMap((item) => {
+    return adminSessions.flatMap((item) => {
       const checkIn = validDate(item.checkInTime);
       if (!checkIn) return [];
-      const section = sections.find((entry) => entry.id === item.sectionId);
-      const seat = section?.seats.find((entry) => entry.id === item.seatId);
       const duration = durationMinutes(item, now);
       return [{
         ...item,
         checkInDate: checkIn,
-        sectionName: section?.name ?? item.section ?? "Unknown section",
-        seatCode: item.seat ?? seat?.seatCode ?? item.seatId ?? "Unknown seat",
+        sectionName: item.section ?? "Unknown section",
+        seatCode: item.seat ?? item.seatId ?? "Unknown seat",
         duration,
         isCompleted: item.sessionStatus === "completed",
       }];
     });
-  }, [completedSessions, now, sections, session]);
+  }, [adminSessions, now]);
 
   const range = rangeFor(dateOption, now, customStart, customEnd);
   const normalizedSeatSearch = seatSearch.trim().toLocaleLowerCase();
@@ -278,7 +346,7 @@ export default function AdminAnalytics() {
     && (!range || (item.checkInDate >= range.start && item.checkInDate < range.end))
     && (sectionFilter === "All Sections" || item.sectionId === sectionFilter)
     && (!normalizedSeatSearch || `${item.seatCode} ${item.seatId}`.toLocaleLowerCase().includes(normalizedSeatSearch))
-    && (!normalizedStudentSearch || String(item.studentId ?? item.userId ?? "").toLocaleLowerCase().includes(normalizedStudentSearch))
+    && (!normalizedStudentSearch || `${item.studentId ?? item.userId ?? ""} ${item.studentName ?? ""}`.toLocaleLowerCase().includes(normalizedStudentSearch))
   )), [allRecords, normalizedSeatSearch, normalizedStudentSearch, range, sectionFilter]);
 
   const completedRecords = records.filter((item) => item.isCompleted);
@@ -374,10 +442,7 @@ export default function AdminAnalytics() {
   const sectionPeriodMax = Math.max(0, ...sectionRows.flatMap((section) => Object.values(section.periodCounts)));
   const noActivity = records.length === 0 || customRangeInvalid;
   const selectedSession = records.find((item) => item.id === selectedSessionId);
-  const selectedStudentName = selectedSession
-    && (selectedSession.studentId ?? selectedSession.userId) === student.studentId
-    ? student.fullName
-    : undefined;
+  const selectedStudentName = selectedSession?.studentName ?? undefined;
   const searchedSeat = seatSearch.trim()
     ? sections.flatMap((section) => section.seats.map((seat) => ({ ...seat, sectionName: section.name })))
       .find((seat) => seat.seatCode.toLocaleLowerCase() === seatSearch.trim().toLocaleLowerCase())
@@ -392,15 +457,265 @@ export default function AdminAnalytics() {
   const reportStart = range?.start && !range.invalid ? formatDateTime(range.start) : "All recorded dates";
   const reportEnd = range?.end && !range.invalid ? formatDateTime(new Date(range.end.getTime() - 1)) : "";
 
+  const exportCsv = () => {
+    setExportError("");
+    if (customRangeInvalid) {
+      setExportError("Set a valid date range before exporting.");
+      return;
+    }
+
+    const rows = [
+      ["Scan2Seat Usage & Analytics Report"],
+      ["Generated", formatDateTime(now)],
+      ["Date range", reportEnd ? `${reportStart} – ${reportEnd}` : reportStart],
+      ["Section filter", sectionFilter],
+      ["Seat search", seatSearch || "All seats"],
+      ["Student search", studentSearch || "All students"],
+      [],
+      ["Summary"],
+      ["Recorded check-ins", records.length],
+      ["Completed sessions", completedRecords.length],
+      ["Active sessions", records.length - completedRecords.length],
+      ["Completed study time", formatExportDuration(completedRecords.length
+        ? completedRecords.reduce((sum, item) => sum + (item.duration ?? 0), 0)
+        : null)],
+      [],
+      ["Section Usage"],
+      ["Section", "Check-ins", "Completed Sessions", "Study Time", "Average Duration"],
+      ...sectionRows.map((item) => [
+        item.name,
+        item.checkIns,
+        item.completed,
+        item.completed ? formatExportDuration(item.minutes) : "Not recorded",
+        item.average === null ? "Not recorded" : formatExportDuration(item.average),
+      ]),
+      [],
+      ["Seat Usage"],
+      ["Seat", "Section", "Recorded Sessions", "Study Time", "Current Status"],
+      ...seatRowsForSearch.map((item) => [
+        item.seatCode,
+        item.section,
+        item.count,
+        item.count ? formatExportDuration(item.minutes) : "Not recorded",
+        item.status,
+      ]),
+      [],
+      ["Session Records"],
+      ["Student ID", "Student Name", "Section", "Seat", "Check-In", "Check-Out", "Duration", "Status", "Location"],
+      ...records.map((item) => [
+        item.studentId ?? item.userId ?? "—",
+        item.studentName ?? "—",
+        item.sectionName,
+        item.seatCode,
+        formatDateTime(item.checkInTime),
+        formatDateTime(item.checkOutTime),
+        formatExportDuration(item.duration),
+        item.isCompleted ? "Completed" : "Active",
+        item.locationStatus ?? "—",
+      ]),
+      [],
+      ["Student Issue Reports"],
+      ["Submitted", "Student ID", "Student Name", "Issue Type", "Seat or Location", "Details"],
+      ...issueReports.map((report) => [
+        formatDateTime(report.created_at),
+        report.student_id ?? "—",
+        report.student_name ?? "—",
+        report.category,
+        report.seat_name ?? "—",
+        report.details,
+      ]),
+    ];
+
+    try {
+      downloadCsv(
+        `scan2seat-analytics-${filenamePart(dateOption)}-${new Date().toISOString().slice(0, 10)}.csv`,
+        rows,
+      );
+    } catch (error) {
+      console.error("Unable to export analytics as CSV:", error);
+      setExportError("The Excel-compatible report could not be generated. Try again.");
+    }
+  };
+
+  const printReport = () => {
+    setExportError("");
+    if (customRangeInvalid) {
+      setExportError("Set a valid date range before printing the report.");
+      return;
+    }
+    try {
+      window.print();
+    } catch (error) {
+      console.error("Unable to print the analytics report:", error);
+      setExportError("The report print dialog could not be opened. Check your browser settings and try again.");
+    }
+  };
+
+  if (adminSessionsLoading || adminSessionsError) {
+    return (
+      <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-4 p-3 sm:p-5">
+        <h2 className="text-2xl font-bold text-[#140B63] sm:text-3xl">Usage &amp; Analytics</h2>
+        <p role={adminSessionsError ? "alert" : "status"} className="rounded-lg border border-[#DDE3F2] bg-white p-4 text-sm text-gray-600">
+          {adminSessionsError || "Loading recorded database sessions…"}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-4 p-3 sm:gap-5 sm:p-5">
+      <style>{`
+        @media print {
+          body * { visibility: hidden !important; }
+          #analytics-print-report, #analytics-print-report * { visibility: visible !important; }
+          #analytics-print-report {
+            display: block !important;
+            position: absolute !important;
+            inset: 0 !important;
+            width: 100% !important;
+            padding: 16px !important;
+            color: #111 !important;
+            background: #fff !important;
+          }
+          #analytics-print-report table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+          #analytics-print-report th, #analytics-print-report td { padding: 5px; border: 1px solid #aaa; text-align: left; }
+          #analytics-print-report h1, #analytics-print-report h2 { margin: 12px 0 6px; }
+          #analytics-print-report tr { break-inside: avoid; }
+        }
+      `}</style>
+      <section id="analytics-print-report" className="hidden" aria-hidden="true">
+        <h1>Scan2Seat Usage &amp; Analytics</h1>
+        <p>Generated: {formatDateTime(now)}</p>
+        <p>
+          Date range: {reportEnd ? `${reportStart} – ${reportEnd}` : reportStart}
+          {" · "}Section: {sectionFilter}
+          {" · "}Seat search: {seatSearch || "All"}
+          {" · "}Student search: {studentSearch || "All"}
+        </p>
+        <h2>Summary</h2>
+        <p>
+          Recorded check-ins: {records.length}
+          {" · "}Completed sessions: {completedRecords.length}
+          {" · "}Active sessions: {records.length - completedRecords.length}
+          {" · "}Completed study time: {formatExportDuration(completedRecords.length
+            ? completedRecords.reduce((sum, item) => sum + (item.duration ?? 0), 0)
+            : null)}
+        </p>
+        <h2>Section Usage</h2>
+        <table>
+          <thead><tr><th>Section</th><th>Check-ins</th><th>Completed</th><th>Study time</th><th>Average</th></tr></thead>
+          <tbody>{sectionRows.map((item) => (
+            <tr key={`print-section-${item.id}`}>
+              <td>{item.name}</td><td>{item.checkIns}</td><td>{item.completed}</td>
+              <td>{item.completed ? formatExportDuration(item.minutes) : "Not recorded"}</td>
+              <td>{item.average === null ? "Not recorded" : formatExportDuration(item.average)}</td>
+            </tr>
+          ))}</tbody>
+        </table>
+        <h2>Seat Usage</h2>
+        <table>
+          <thead><tr><th>Seat</th><th>Section</th><th>Recorded sessions</th><th>Study time</th><th>Current status</th></tr></thead>
+          <tbody>{seatRowsForSearch.map((item) => (
+            <tr key={`print-seat-${item.seatId}`}>
+              <td>{item.seatCode}</td><td>{item.section}</td><td>{item.count}</td>
+              <td>{item.count ? formatExportDuration(item.minutes) : "Not recorded"}</td><td>{item.status}</td>
+            </tr>
+          ))}</tbody>
+        </table>
+        <h2>Session Records</h2>
+        <table>
+          <thead><tr><th>Student ID</th><th>Student name</th><th>Section</th><th>Seat</th><th>Check-in</th><th>Check-out</th><th>Duration</th><th>Status</th></tr></thead>
+          <tbody>{records.map((item) => (
+            <tr key={`print-session-${item.id}`}>
+              <td>{item.studentId ?? item.userId ?? "—"}</td><td>{item.studentName ?? "—"}</td>
+              <td>{item.sectionName}</td><td>{item.seatCode}</td>
+              <td>{formatDateTime(item.checkInTime)}</td><td>{formatDateTime(item.checkOutTime)}</td>
+              <td>{formatExportDuration(item.duration)}</td><td>{item.isCompleted ? "Completed" : "Active"}</td>
+            </tr>
+          ))}</tbody>
+        </table>
+        <h2>Student Issue Reports</h2>
+        <table>
+          <thead><tr><th>Submitted</th><th>Student ID</th><th>Student name</th><th>Issue type</th><th>Seat or location</th><th>Details</th></tr></thead>
+          <tbody>{issueReports.map((report) => (
+            <tr key={`print-issue-${report.id}`}>
+              <td>{formatDateTime(report.created_at)}</td><td>{report.student_id ?? "—"}</td>
+              <td>{report.student_name ?? "—"}</td><td>{report.category}</td>
+              <td>{report.seat_name ?? "—"}</td><td>{report.details}</td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </section>
       <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-[#140B63] sm:text-3xl">Usage &amp; Analytics</h2>
           <p className="mt-1 text-sm text-gray-600">Analyse library seat usage, identify usage patterns and support data-informed management decisions.</p>
           <p className="mt-1 text-xs text-gray-500">Based on recorded Scan2Seat activity; counts represent check-ins, not simultaneous occupancy or all library visitors.</p>
+          {catalogSyncError && <p role="alert" className="mt-1 text-xs text-amber-800">{catalogSyncError} Session history remains database-backed, but seat inventory metrics are unavailable.</p>}
         </div>
       </header>
+
+      <section aria-labelledby="student-issue-reports-heading" className="rounded-xl border border-[#DDE3F2] bg-white p-4 shadow-sm sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 id="student-issue-reports-heading" className="text-lg font-bold text-[#140B63]">
+              Student Issue Reports
+            </h2>
+            <p className="mt-1 text-sm text-gray-600">
+              Reports submitted by students about seats and study spaces.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setIssueReportsLoading(true);
+              setIssueReportRefresh((value) => value + 1);
+            }}
+            disabled={issueReportsLoading}
+            className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#DDE3F2] px-3 py-2 text-sm font-semibold text-[#140B63] disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${issueReportsLoading ? "animate-spin" : ""}`} aria-hidden="true" />
+            Refresh reports
+          </button>
+        </div>
+        {issueReportsError ? (
+          <p role="alert" className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            {issueReportsError}
+          </p>
+        ) : issueReportsLoading ? (
+          <p role="status" className="mt-3 text-sm text-gray-500">Loading student issue reports…</p>
+        ) : issueReports.length ? (
+          <div className="mt-4 max-h-[32rem] space-y-3 overflow-y-auto">
+            {issueReports.map((report) => (
+              <article key={report.id} className="rounded-lg border border-[#EEF0F5] bg-[#FCFCFF] p-3 sm:p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-semibold text-[#140B63]">{report.category}</h3>
+                  <time dateTime={report.created_at} className="text-xs text-gray-500">
+                    {formatDateTime(report.created_at)}
+                  </time>
+                </div>
+                <dl className="mt-2 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+                  <div>
+                    <dt className="text-gray-500">Student</dt>
+                    <dd className="font-semibold text-gray-800">
+                      {report.student_name || "Student"}{report.student_id ? ` · ${report.student_id}` : ""}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Seat or location</dt>
+                    <dd className="font-semibold text-gray-800">{report.seat_name || "Not specified"}</dd>
+                  </div>
+                </dl>
+                <p className="mt-3 whitespace-pre-wrap break-words text-sm text-gray-700">{report.details}</p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 rounded-lg border border-dashed border-[#DDE3F2] px-3 py-6 text-center text-sm text-gray-500">
+            No student issue reports have been submitted.
+          </p>
+        )}
+      </section>
 
       <section aria-label="Analytics date range" className="rounded-xl border border-[#DDE3F2] bg-white p-3 shadow-sm">
         <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -481,7 +796,7 @@ export default function AdminAnalytics() {
         <StatCard label="Most Used Section" value={!enoughPeakData || !topSection ? "Not enough recorded data" : topSection.names.join(", ")} icon={Library} />
         <StatCard label="Most Used Seat" value={!enoughPeakData || !highestSeat ? "Not enough recorded data" : highestSeat.seatCode} note="Based on recorded sessions" icon={Armchair} />
         <StatCard label="Peak Usage Period" value={!enoughPeakData || !topPeriod ? "Not enough recorded data" : topPeriod.names.join(", ")} icon={BarChart3} />
-        <StatCard label="Current Occupancy" value={`${availability.occupied} / ${availability.total}`} note="Current seat status; not historical check-ins" icon={UsersRound} />
+        <StatCard label="Current Occupancy" value={catalogSyncError ? "—" : `${availability.occupied} / ${availability.total}`} note="Current seat status; not historical check-ins" icon={UsersRound} />
         </div>
       </section>
 
@@ -492,13 +807,13 @@ export default function AdminAnalytics() {
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            ["Total Seats", availability.total],
-            ["Available", availability.available],
-            ["Occupied", availability.occupied],
-            ["Unavailable", availability.unavailable],
+            ["Total Seats", catalogSyncError ? "—" : availability.total],
+            ["Available", catalogSyncError ? "—" : availability.available],
+            ["Occupied", catalogSyncError ? "—" : availability.occupied],
+            ["Unavailable", catalogSyncError ? "—" : availability.unavailable],
           ].map(([label, value]) => (
             <div key={label} className="rounded-lg border border-[#EEF0F5] bg-[#FCFCFF] p-3">
-              <p className="text-xl font-bold text-[#140B63]">{value}</p>
+              <p className="text-2xl font-bold text-[#140B63] sm:text-3xl">{value}</p>
               <p className="mt-1 text-xs text-gray-500">{label}</p>
             </div>
           ))}
@@ -523,7 +838,7 @@ export default function AdminAnalytics() {
                     if (seat.status === "Occupied") counts.occupied += 1;
                     return counts;
                   }, { available: 0, occupied: 0 });
-                  return <tr key={item.id} className="border-b border-[#EEF0F5] last:border-0"><td className="py-2 pr-3 font-semibold text-[#140B63]">{item.name}</td><td className="py-2 pr-3">{item.checkIns}</td><td className="py-2 pr-3">{item.completed}</td><td className="py-2 pr-3">{formatDuration(item.completed ? item.minutes : null)}</td><td className="py-2 pr-3">{item.average === null ? "Not enough recorded data" : formatDuration(item.average)}</td><td className="py-2 pr-3">{currentSeats.available}</td><td className="py-2">{currentSeats.occupied}</td></tr>;
+                  return <tr key={item.id} className="border-b border-[#EEF0F5] last:border-0"><td className="py-2 pr-3 font-semibold text-[#140B63]">{item.name}</td><td className="py-2 pr-3">{item.checkIns}</td><td className="py-2 pr-3">{item.completed}</td><td className="py-2 pr-3">{formatDuration(item.completed ? item.minutes : null)}</td><td className="py-2 pr-3">{item.average === null ? "Not enough recorded data" : formatDuration(item.average)}</td><td className="py-2 pr-3">{catalogSyncError ? "—" : currentSeats.available}</td><td className="py-2">{catalogSyncError ? "—" : currentSeats.occupied}</td></tr>;
                 })}</tbody>
               </table>
             </div>
@@ -676,7 +991,7 @@ export default function AdminAnalytics() {
             <table className="w-full min-w-[1000px] border-collapse text-left text-sm">
               <thead className="bg-[#FCFCFF]">
                 <tr className="border-b border-[#DDE3F2] text-xs text-gray-500">
-                  <th className="px-3 py-3 font-semibold">Student ID</th>
+                  <th className="px-3 py-3 font-semibold">Student</th>
                   <th className="px-3 py-3 font-semibold">Section</th>
                   <th className="px-3 py-3 font-semibold">Seat</th>
                   <th className="px-3 py-3 font-semibold">Check-in</th>
@@ -689,7 +1004,10 @@ export default function AdminAnalytics() {
               <tbody>
                 {completedRecords.map((item) => (
                   <tr key={item.id} className="border-b border-[#EEF0F5] last:border-0">
-                    <td className="whitespace-nowrap px-3 py-3 font-semibold text-[#140B63]">{item.studentId ?? item.userId ?? "—"}</td>
+                    <td className="whitespace-nowrap px-3 py-3 font-semibold text-[#140B63]">
+                      {item.studentName || item.studentId || "—"}
+                      {item.studentName && <span className="block text-xs font-normal text-gray-500">{item.studentId}</span>}
+                    </td>
                     <td className="px-3 py-3 text-gray-700">{item.sectionName}</td>
                     <td className="whitespace-nowrap px-3 py-3 text-gray-700">{item.seatCode}</td>
                     <td className="whitespace-nowrap px-3 py-3 text-gray-600">{formatDateTime(item.checkInTime)}</td>
@@ -748,12 +1066,35 @@ export default function AdminAnalytics() {
           ].map(([label, value]) => <div key={label} className="rounded-lg border border-[#EEF0F5] bg-[#FCFCFF] p-3"><p className="text-sm font-bold text-[#140B63]">{value}</p><p className="mt-1 text-xs text-gray-500">{label}</p></div>)}
         </div>
         <div className="mt-4 flex flex-col gap-2 rounded-lg border border-dashed border-[#DDE3F2] bg-[#FCFCFF] p-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-gray-600">PDF/Excel generation is not available in this frontend prototype; no file will be generated.</p>
-          <button type="button" disabled title="Report export requires backend/report-generation support." className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-[#DDE3F2] bg-white px-3 text-sm font-semibold text-gray-400">
-            <Download className="h-4 w-4" aria-hidden="true" />
-            Export (coming later)
-          </button>
+          <p className="text-xs text-gray-600">
+            Export filtered session details and usage summaries as a CSV file for Excel, or print/save a report as PDF.
+          </p>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={exportCsv}
+              disabled={customRangeInvalid}
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#DDE3F2] bg-white px-3 text-sm font-semibold text-[#140B63] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" aria-hidden="true" />
+              Export Excel CSV
+            </button>
+            <button
+              type="button"
+              onClick={printReport}
+              disabled={customRangeInvalid}
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#140B63] px-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Printer className="h-4 w-4" aria-hidden="true" />
+              Print / Save PDF
+            </button>
+          </div>
         </div>
+        {exportError && (
+          <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
+            {exportError}
+          </p>
+        )}
       </ChartCard>
 
       <ChartCard title="Annual Usage" description="Yearly summaries include only years and records present in the filtered shared session data.">
@@ -797,7 +1138,7 @@ export default function AdminAnalytics() {
           </>
         ) : <p className="text-sm text-gray-500">Not enough recorded data for an annual report.</p>}
         <p className="mt-4 border-t border-[#EEF0F5] pt-3 text-xs text-gray-500">
-          Daily, weekly, monthly, semester and annual summaries use the current filters. File export requires backend/report-generation support.
+          Daily, weekly, monthly, semester and annual summaries use the current filters. Exported files use the current global date, section, seat and student filters.
         </p>
       </ChartCard>
 

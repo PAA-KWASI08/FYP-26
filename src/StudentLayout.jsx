@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
+  AlertTriangle,
   ChevronLeft,
   ChevronRight,
   CircleHelp,
@@ -22,6 +23,7 @@ const navigationItems = [
   { label: "Home", to: "/dashboard", icon: Home, key: "home" },
   { label: "Sections", to: "/sections", icon: Library, key: "sections" },
   { label: "Check In", to: "/check-in", icon: QrCode, key: "check-in" },
+  { label: "Report an Issue", to: "/report-issue", icon: AlertTriangle, key: "report-issue" },
   { label: "My Sessions", to: "/my-sessions", icon: BookOpen, key: "my-sessions" },
   { label: "Announcements", to: "/notifications", icon: Bell, key: "notifications" },
   { label: "How It Works", to: "/how-it-works", icon: CircleHelp, key: "how-it-works" },
@@ -53,6 +55,8 @@ function StudentLayoutFrame({ expanded, setExpanded }) {
   const pendingScrollRestore = useRef(null);
   const {
     session,
+    studentSessionsLoading,
+    sessionSyncError,
     checkInConfirmation,
     checkoutConfirmation,
     clearCheckInConfirmation,
@@ -193,6 +197,7 @@ function StudentLayoutFrame({ expanded, setExpanded }) {
       <main className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <AvailabilityReminder
           session={session}
+          sessionLoading={studentSessionsLoading}
           checkInConfirmation={checkInConfirmation}
           checkoutConfirmation={checkoutConfirmation}
           activeSessionVisible={activeSessionVisible}
@@ -200,6 +205,11 @@ function StudentLayoutFrame({ expanded, setExpanded }) {
           warningDismissed={warningDismissed}
           warningRef={warningRef}
         />
+        {sessionSyncError && (
+          <p className="mx-3 mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 sm:mx-4" role="alert">
+            {sessionSyncError}
+          </p>
+        )}
         <div
           ref={contentRef}
           className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto"

@@ -1,5 +1,4 @@
 export const prototypePin = "1234";
-export const prototypeAdminId = "admin001";
 
 export const prototypeStudents = [
   {
@@ -35,3 +34,8 @@ export const prototypeStudents = [
     college: "College of Basic and Applied Sciences",
   },
 ];
+
+export const prototypeAdmin = {
+  adminId: "admin001",
+  fullName: "Prototype Administrator",
+};

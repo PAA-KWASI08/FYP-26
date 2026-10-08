@@ -1,18 +1,13 @@
-import { prototypeAdminId, prototypePin, prototypeStudents } from "./prototypeCredentials.js";
+import { prototypeAdmin, prototypeStudents } from "./prototypeCredentials";
 
-const localDemoSessionKey = "slm-local-demo-role";
-const legacyStudentSessionKey = "slm-local-demo-student";
+const prototypeSessionKey = "slm-prototype-session";
+const legacyRoleKey = "slm-local-demo-role";
+const legacyStudentKey = "slm-local-demo-student";
 
-function createLocalDemoAuthState(role, studentId = null) {
-  const student = role === "student"
-    ? prototypeStudents.find((item) => item.studentId === studentId)
-    : null;
-
-  if (role === "student" && !student) return null;
-  if (role !== "student" && role !== "admin") return null;
-
-  const id = role === "student" ? `prototype-student-${student.studentId}` : "prototype-admin";
-  const profile = role === "student"
+function createAuthState(role, student) {
+  const isStudent = role === "student";
+  const id = isStudent ? `prototype-student-${student.studentId}` : "prototype-admin";
+  const profile = isStudent
     ? {
       id,
       student_id: student.studentId,
@@ -28,7 +23,7 @@ function createLocalDemoAuthState(role, studentId = null) {
     : {
       id,
       student_id: null,
-      full_name: prototypeAdminId,
+      full_name: prototypeAdmin.fullName,
       programme: null,
       department: null,
       level: null,
@@ -40,42 +35,49 @@ function createLocalDemoAuthState(role, studentId = null) {
 
   return {
     session: {
-      isLocalDemo: true,
+      isPrototype: true,
       role,
-      user: { id, email: null },
+      user: { id, studentId: student?.studentId ?? null },
     },
     profile,
   };
 }
 
-export function getStoredLocalDemoAuthState() {
+export function createPrototypeSession(role, studentId = null) {
+  const student = role === "student"
+    ? prototypeStudents.find((item) => item.studentId === studentId)
+    : null;
+  if (role === "student" && !student) return null;
+  if (role !== "student" && role !== "admin") return null;
+  return createAuthState(role, student);
+}
+
+export function getStoredPrototypeAuthState() {
   if (typeof window === "undefined") return null;
 
   try {
-    const storedSession = window.localStorage.getItem(localDemoSessionKey);
-    if (storedSession) {
-      let sessionData;
-      try {
-        sessionData = JSON.parse(storedSession);
-      } catch {
-        sessionData = { role: storedSession };
-      }
-
-      const role = sessionData?.role;
-      const studentId = role === "student"
-        ? sessionData.studentId ?? prototypeStudents[0]?.studentId
-        : null;
-      const authState = createLocalDemoAuthState(role, studentId);
-      if (authState) return authState;
+    const stored = window.localStorage.getItem(prototypeSessionKey);
+    if (stored) {
+      const { role, studentId = null } = JSON.parse(stored);
+      return createPrototypeSession(role, studentId);
     }
 
-    if (window.localStorage.getItem(legacyStudentSessionKey) === "active") {
-      const authState = createLocalDemoAuthState("student", prototypeStudents[0]?.studentId);
-      if (authState) {
-        storeLocalDemoSession(true, "student", prototypeStudents[0].studentId);
-        window.localStorage.removeItem(legacyStudentSessionKey);
-        return authState;
+    const legacyRole = window.localStorage.getItem(legacyRoleKey);
+    const hadLegacyStudentSession = window.localStorage.getItem(legacyStudentKey) === "active";
+    if (legacyRole === "student" || legacyRole === "admin" || hadLegacyStudentSession) {
+      const migrated = createPrototypeSession(
+        legacyRole === "admin" ? "admin" : "student",
+        prototypeStudents[0]?.studentId,
+      );
+      if (migrated) {
+        window.localStorage.setItem(prototypeSessionKey, JSON.stringify({
+          role: migrated.session.role,
+          studentId: migrated.session.user.studentId,
+        }));
       }
+      window.localStorage.removeItem(legacyRoleKey);
+      window.localStorage.removeItem(legacyStudentKey);
+      return migrated;
     }
 
     return null;
@@ -85,52 +87,41 @@ export function getStoredLocalDemoAuthState() {
   }
 }
 
-export function storeLocalDemoSession(isActive, role = "student", studentId = null) {
+export function storePrototypeSession(role, studentId = null) {
   if (typeof window === "undefined") {
     return { ok: false, error: "Prototype login is only available in a browser." };
   }
 
   try {
-    if (isActive) {
-      const authState = createLocalDemoAuthState(role, studentId);
-      if (!authState) {
-        return { ok: false, error: "Unable to save an invalid prototype session." };
-      }
-      window.localStorage.setItem(localDemoSessionKey, JSON.stringify({ role, studentId }));
-    } else {
-      window.localStorage.removeItem(localDemoSessionKey);
-      window.localStorage.removeItem(legacyStudentSessionKey);
-    }
+    window.localStorage.setItem(prototypeSessionKey, JSON.stringify({ role, studentId }));
+    window.localStorage.removeItem(legacyRoleKey);
+    window.localStorage.removeItem(legacyStudentKey);
     return { ok: true };
   } catch (error) {
-    console.error("Unable to update the local prototype session:", error);
-    return { ok: false, error: "Unable to save the local prototype session in this browser." };
+    console.error("Unable to save the local prototype session:", error);
+    return { ok: false, error: "Unable to save the prototype session in this browser." };
   }
 }
 
-export function createLocalDemoSession(role, studentId = null) {
-  return createLocalDemoAuthState(role, studentId);
+export function clearPrototypeSession() {
+  if (typeof window === "undefined") {
+    return { ok: false, error: "Prototype logout is only available in a browser." };
+  }
+
+  try {
+    window.localStorage.removeItem(prototypeSessionKey);
+    window.localStorage.removeItem(legacyRoleKey);
+    window.localStorage.removeItem(legacyStudentKey);
+    return { ok: true };
+  } catch (error) {
+    console.error("Unable to clear the local prototype session:", error);
+    return { ok: false, error: "Unable to clear the prototype session in this browser." };
+  }
 }
 
-export function validateLocalDemoCredentials(username, pin, role) {
-  const errorMessage = role === "admin"
-    ? "Invalid admin ID or PIN. Check your credentials and try again."
-    : "Invalid student ID or PIN. Check your credentials and try again.";
-
-  if (pin !== prototypePin) return { ok: false, message: errorMessage };
-
-  if (role === "admin") {
-    return username === prototypeAdminId
-      ? { ok: true }
-      : { ok: false, message: errorMessage };
-  }
-
-  if (role !== "student" || !/^\d{8}$/.test(username)) {
-    return { ok: false, message: errorMessage };
-  }
-
-  const student = prototypeStudents.find((item) => item.studentId === username);
-  return student
-    ? { ok: true, student }
-    : { ok: false, message: errorMessage };
+export function isValidPrototypeIdentity(username, role) {
+  if (role === "admin") return username === prototypeAdmin.adminId;
+  return role === "student"
+    && /^\d{8}$/.test(username)
+    && prototypeStudents.some((student) => student.studentId === username);
 }

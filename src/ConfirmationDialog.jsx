@@ -5,6 +5,7 @@ export default function ConfirmationDialog({
   message,
   details,
   confirmLabel,
+  busy = false,
   onConfirm,
   onCancel,
 }) {
@@ -51,6 +52,7 @@ export default function ConfirmationDialog({
           <button
             type="button"
             onClick={onCancel}
+            disabled={busy}
             className="rounded-lg border px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B5FC7]"
           >
             Cancel
@@ -58,6 +60,7 @@ export default function ConfirmationDialog({
           <button
             type="button"
             onClick={onConfirm}
+            disabled={busy}
             className="rounded-lg bg-[#140B63] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#251b79] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B5FC7]"
           >
             {confirmLabel}

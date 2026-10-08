@@ -5,8 +5,6 @@ export const mockStudent = {
   department: "Computer Science",
   level: "L400",
   college: "College of Basic and Applied Sciences",
-  email: "student@ug.edu.gh",
-  accountStatus: "Active",
 };
 
 export function getStudentInitials(fullName) {

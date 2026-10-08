@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, Plus, Trash2 } from "lucide-react";
 import ConfirmationDialog from "./ConfirmationDialog";
 import {
@@ -6,6 +6,11 @@ import {
   isAnnouncementExpired,
 } from "./announcementData";
 import { useStudentSession } from "./studentSession";
+import {
+  deleteAnnouncement as deleteAnnouncementRecord,
+  getAdminAnnouncements,
+  saveAnnouncement,
+} from "./lib/announcementService";
 
 const types = [
   "General",
@@ -153,17 +158,48 @@ function StatusBadge({ announcement }) {
 
 export default function AdminAnnouncements() {
   const {
-    announcements,
     sections,
-    createAnnouncement,
-    updateAnnouncement,
-    deleteAnnouncement,
+    refreshPublishedAnnouncements,
   } = useStudentSession();
+  const [announcements, setAnnouncements] = useState([]);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(true);
+  const [announcementsError, setAnnouncementsError] = useState("");
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
   const [confirmation, setConfirmation] = useState(null);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const reloadAnnouncements = async () => {
+    const result = await getAdminAnnouncements();
+    if (result.error) {
+      setAnnouncementsError("Unable to load announcements from Supabase. Check the database migration and connection.");
+      return false;
+    }
+    setAnnouncements(result.data ?? []);
+    setAnnouncementsError("");
+    return true;
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const result = await getAdminAnnouncements();
+      if (cancelled) return;
+      if (result.error) {
+        setAnnouncementsError("Unable to load announcements from Supabase. Check the database migration and connection.");
+      } else {
+        setAnnouncements(result.data ?? []);
+        setAnnouncementsError("");
+      }
+      setAnnouncementsLoading(false);
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const openCreateForm = () => {
     setForm({ ...initialForm });
@@ -192,20 +228,23 @@ export default function AdminAnnouncements() {
     setEditingId(null);
   };
 
-  const commitForm = () => {
+  const commitForm = async () => {
     const payload = {
       ...form,
       sectionId: form.audience === "Specific Section" ? form.sectionId : null,
       expiryDate: form.expiryDate || null,
     };
-    const result = editingId
-      ? updateAnnouncement(editingId, payload)
-      : createAnnouncement(payload);
-    if (!result.ok) {
-      setError(result.message);
+    setSaving(true);
+    const result = await saveAnnouncement(editingId, payload);
+    if (result.error) {
+      setError(result.error.message);
+      setSaving(false);
       setConfirmation(null);
       return;
     }
+    await reloadAnnouncements();
+    await refreshPublishedAnnouncements();
+    setSaving(false);
     closeForm();
     setConfirmation(null);
     setError("");
@@ -260,18 +299,36 @@ export default function AdminAnnouncements() {
     });
   };
 
-  const confirmAction = () => {
+  const confirmAction = async () => {
+    if (saving || !confirmation) return;
+    setSaving(true);
+    let result;
     if (confirmation.kind === "save") {
-      commitForm();
+      setSaving(false);
+      await commitForm();
+      return;
     } else if (confirmation.kind === "status") {
-      const result = updateAnnouncement(confirmation.announcementId, { status: confirmation.status });
-      if (!result.ok) setError(result.message);
-      setConfirmation(null);
+      const existing = announcements.find((item) => item.id === confirmation.announcementId);
+      if (!existing) {
+        setError("The selected announcement could not be found.");
+        setSaving(false);
+        setConfirmation(null);
+        return;
+      }
+      result = await saveAnnouncement(existing.id, { ...existing, status: confirmation.status });
     } else if (confirmation.kind === "delete") {
-      const result = deleteAnnouncement(confirmation.announcementId);
-      if (!result.ok) setError(result.message);
-      setConfirmation(null);
+      result = await deleteAnnouncementRecord(confirmation.announcementId);
     }
+
+    if (result?.error) {
+      setError(result.error.message);
+    } else {
+      await reloadAnnouncements();
+      await refreshPublishedAnnouncements();
+      setError("");
+    }
+    setSaving(false);
+    setConfirmation(null);
   };
 
   const getAudienceLabel = (announcement) => announcement.audience === "All Students"
@@ -287,7 +344,7 @@ export default function AdminAnnouncements() {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-[#140B63] sm:text-3xl">Notifications &amp; Announcements</h2>
-          <p className="mt-1 text-sm text-gray-600">Create and manage information shown to students.</p>
+          <p className="mt-1 text-sm text-gray-600">Review published announcements stored in Supabase.</p>
         </div>
         <button
           type="button"
@@ -302,6 +359,16 @@ export default function AdminAnnouncements() {
       {error && (
         <p role="alert" className="rounded-lg border border-[#F0D9CE] bg-[#FBF1EC] px-3 py-2 text-sm text-[#8A4934]">
           {error}
+        </p>
+      )}
+      <p role="note" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+        Administrator actions require an authenticated, active administrator account. Do not share your account password.
+      </p>
+      {saving && <p role="status" className="text-sm text-gray-500">Saving announcement…</p>}
+      {announcementsLoading && <p role="status" className="text-sm text-gray-500">Loading announcements…</p>}
+      {announcementsError && (
+        <p role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          {announcementsError}
         </p>
       )}
 
@@ -336,10 +403,10 @@ export default function AdminAnnouncements() {
               </div>
             </div>
           </article>
-        )) : (
+        )) : announcementsLoading || announcementsError ? null : (
           <div className="rounded-xl border border-dashed border-[#DDE3F2] bg-white px-4 py-10 text-center">
             <Bell className="mx-auto h-7 w-7 text-[#7A80BD]" aria-hidden="true" />
-            <p className="mt-2 font-semibold text-[#140B63]">No announcements yet</p>
+            <p className="mt-2 font-semibold text-[#140B63]">No published announcements</p>
             <p className="mt-1 text-sm text-gray-500">Create an announcement to share information with students.</p>
           </div>
         )}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   Armchair,
@@ -14,6 +14,7 @@ import {
 import libraryImage from "./assets/images/balme-library.jpg";
 import scan2seat from "./assets/images/scan2seat.png";
 import { useAuth } from "./useAuth";
+import { getAdminGeofenceAlerts } from "./lib/seatService";
 
 const navigationItems = [
   { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard },
@@ -27,8 +28,26 @@ const navigationItems = [
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { profile, signOut } = useAuth();
+  const { signOut } = useAuth();
   const [expanded, setExpanded] = useState(() => window.matchMedia("(min-width: 768px)").matches);
+  const [geofenceAlertCount, setGeofenceAlertCount] = useState(0);
+  const [geofenceAlertError, setGeofenceAlertError] = useState("");
+
+  const refreshGeofenceAlertCount = useCallback(async () => {
+    try {
+      const { data, error } = await getAdminGeofenceAlerts();
+      if (error) {
+        console.error("Unable to refresh administrator geofence alerts:", error.message);
+        setGeofenceAlertError("Administrator location alerts are temporarily unavailable.");
+        return;
+      }
+      setGeofenceAlertCount(data?.length ?? 0);
+      setGeofenceAlertError("");
+    } catch (error) {
+      console.error("Unable to request administrator geofence alerts:", error);
+      setGeofenceAlertError("Administrator location alerts are temporarily unavailable.");
+    }
+  }, []);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(min-width: 768px)");
@@ -38,6 +57,15 @@ export default function AdminLayout() {
     mediaQuery.addEventListener("change", updateForViewport);
     return () => mediaQuery.removeEventListener("change", updateForViewport);
   }, []);
+
+  useEffect(() => {
+    const initialRefresh = window.setTimeout(() => void refreshGeofenceAlertCount(), 0);
+    const timer = window.setInterval(() => void refreshGeofenceAlertCount(), 15000);
+    return () => {
+      window.clearTimeout(initialRefresh);
+      window.clearInterval(timer);
+    };
+  }, [refreshGeofenceAlertCount]);
 
   const logout = async () => {
     await signOut();
@@ -136,16 +164,40 @@ export default function AdminLayout() {
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#5B5FC7]">Administration</p>
             <h1 className="text-lg font-bold text-[#140B63]">{navigationItems.find((item) => item.to === location.pathname)?.label ?? "Dashboard"}</h1>
           </div>
-          <div className="flex items-center gap-3 rounded-lg border border-[#DDE3F2] bg-[#FCFCFF] px-3 py-2">
+          <button
+            type="button"
+            onClick={() => navigate("/admin/change-password")}
+            className="flex items-center gap-3 rounded-lg border border-[#DDE3F2] bg-[#FCFCFF] px-3 py-2 text-left transition hover:border-[#5B5FC7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B5FC7]"
+            aria-label="Change administrator password"
+          >
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#140B63] text-sm font-semibold text-white" aria-hidden="true">
               A
             </span>
             <span className="hidden sm:block">
-              <span className="block text-sm font-bold text-[#140B63]">{profile.full_name}</span>
-              <span className="block text-xs text-gray-500">Administrator</span>
+              <span className="block text-sm font-bold text-[#140B63]">Admin</span>
+              <span className="block text-xs text-gray-500">Library Administrator</span>
             </span>
-          </div>
+          </button>
         </header>
+        {geofenceAlertCount > 0 && (
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 sm:px-6" role="alert">
+            <span className="font-semibold">
+              {geofenceAlertCount} seat{geofenceAlertCount === 1 ? "" : "s"} outside the Balme 30 m geofence for at least 10 minutes. Review within 5 minutes or the seat{geofenceAlertCount === 1 ? "" : "s"} will be released automatically.
+            </span>
+            <button
+              type="button"
+              onClick={() => navigate("/admin/active-sessions")}
+              className="min-h-9 rounded-lg border border-amber-400 bg-white px-3 py-1.5 text-sm font-semibold text-amber-950 hover:bg-amber-100"
+            >
+              Review geofence alerts
+            </button>
+          </div>
+        )}
+        {geofenceAlertError && (
+          <p className="shrink-0 border-b border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-800 sm:px-6" role="alert">
+            {geofenceAlertError}
+          </p>
+        )}
         <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
           <Outlet />
         </div>

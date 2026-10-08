@@ -67,11 +67,6 @@ export default function StudentProfileMenu({ compact = false }) {
           <span className="block truncate text-sm font-bold text-[#140B63]" title={profile.full_name}>
             {profile.full_name}
           </span>
-          {!compact && (
-            <span className="block truncate text-[11px] text-gray-500" title={profile.student_id ?? ""}>
-              {profile.student_id ?? "—"}
-            </span>
-          )}
         </span>
         <ChevronDown
           className={`h-4 w-4 flex-shrink-0 text-[#5B5FC7] transition-transform ${open ? "rotate-180" : ""}`}

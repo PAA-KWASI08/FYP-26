@@ -2,18 +2,18 @@ import { getLibraryAvailability, getSectionAvailability } from "./sections";
 
 export const PROLONGED_SESSION_REVIEW_MS = 4 * 60 * 60 * 1000;
 
-export function getAdminOverview(sections, activeSession, now = Date.now()) {
+export function getAdminOverview(sections, sessionRecords = [], now = Date.now()) {
   const sectionOverview = sections.map((section) => ({
     ...section,
     ...getSectionAvailability(section),
   }));
   const availability = getLibraryAvailability(sections);
-  const activeSessions = activeSession?.sessionStatus === "active"
-    ? [{
-      ...activeSession,
-      studyDurationMs: Math.max(0, now - new Date(activeSession.checkInTime).getTime()),
-    }]
-    : [];
+  const activeSessions = sessionRecords
+    .filter((record) => record.sessionStatus === "active")
+    .map((record) => ({
+      ...record,
+      studyDurationMs: Math.max(0, now - new Date(record.checkInTime).getTime()),
+    }));
   const needsAttention = activeSessions.filter(
     (item) => item.studyDurationMs >= PROLONGED_SESSION_REVIEW_MS,
   );

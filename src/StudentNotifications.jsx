@@ -3,12 +3,17 @@ import { Bell, ChevronRight } from "lucide-react";
 import StudentProfileMenu from "./StudentProfileMenu";
 import { formatAnnouncementDate, getActiveAnnouncements } from "./announcementData";
 import { useStudentSession } from "./studentSession";
-import { useAuth } from "./useAuth";
 
 export default function StudentNotifications() {
   const [searchParams] = useSearchParams();
-  const { announcements, sections, session } = useStudentSession();
-  const { profile } = useAuth();
+  const {
+    announcements,
+    announcementsLoading,
+    announcementsError,
+    sections,
+    session,
+    student,
+  } = useStudentSession();
   const sectionId = searchParams.get("section") || session?.sectionId || null;
   const section = sections.find((item) => item.id === sectionId);
   const relevantAnnouncements = getActiveAnnouncements(announcements, sectionId);
@@ -18,7 +23,7 @@ export default function StudentNotifications() {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="text-[10px] uppercase tracking-[0.16em] text-[#140B63]">Welcome Back,</p>
-          <h1 className="mt-1 truncate text-2xl font-bold text-[#140B63] sm:text-3xl">{profile.full_name}</h1>
+          <h1 className="mt-1 truncate text-2xl font-bold text-[#140B63] sm:text-3xl">{student.fullName}</h1>
           <p className="mt-1 text-sm text-gray-600">Announcements for students{section ? ` · ${section.name}` : ""}</p>
         </div>
         <StudentProfileMenu compact />
@@ -35,7 +40,15 @@ export default function StudentNotifications() {
           </div>
         </div>
 
-        {relevantAnnouncements.length ? (
+        {announcementsLoading ? (
+          <p role="status" className="rounded-lg border border-[#DDE3F2] bg-white p-4 text-sm text-gray-600">
+            Loading announcements…
+          </p>
+        ) : announcementsError ? (
+          <p role="alert" className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            {announcementsError}
+          </p>
+        ) : relevantAnnouncements.length ? (
           <div className="space-y-3">
             {relevantAnnouncements.map((announcement) => {
               const announcementSection = sections.find((item) => item.id === announcement.sectionId);

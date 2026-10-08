@@ -8,16 +8,59 @@ import {
 import { getSectionAvailability, getSeatStatus } from "./sections";
 import { useStudentSession } from "./studentSession";
 import StudentProfileMenu from "./StudentProfileMenu";
+import { getSections } from "./lib/sectionService";
+import { getSeatCountsForSection } from "./lib/seatService";
 
 export default function SeatMap() {
   const navigate = useNavigate();
   const { sectionId } = useParams();
-  const { sections: currentSections } = useStudentSession();
+  const { sections: currentSections, databaseSeats, catalogSyncError } = useStudentSession();
   const [searchQuery, setSearchQuery] = useState("");
   const [focusedSeatId, setFocusedSeatId] = useState(null);
+  const [supabaseSections, setSupabaseSections] = useState(null);
+  const [sectionsLoading, setSectionsLoading] = useState(true);
+  const [sectionsError, setSectionsError] = useState(null);
   const selectedSection = currentSections.find((section) => section.id === sectionId);
+  const orderedSections = supabaseSections
+    ? [...supabaseSections].sort((left, right) => {
+      const leftIsOpen = left.status?.toLowerCase() === "open";
+      const rightIsOpen = right.status?.toLowerCase() === "open";
+      if (leftIsOpen !== rightIsOpen) return leftIsOpen ? -1 : 1;
+      return left.name.localeCompare(right.name);
+    })
+    : supabaseSections;
 
   const isMapView = Boolean(selectedSection);
+  useEffect(() => {
+    if (sectionId) return undefined;
+
+    let cancelled = false;
+    const loadSections = async () => {
+      try {
+        const result = await getSections();
+        if (cancelled) return;
+        if (result.error) {
+          setSectionsError(result.error);
+          setSupabaseSections(null);
+        } else {
+          setSectionsError(null);
+          setSupabaseSections(result.data);
+        }
+      } catch (error) {
+        if (cancelled) return;
+        setSectionsError(error instanceof Error ? error : new Error(String(error)));
+        setSupabaseSections(null);
+      } finally {
+        if (!cancelled) setSectionsLoading(false);
+      }
+    };
+
+    void loadSections();
+    return () => {
+      cancelled = true;
+    };
+  }, [sectionId]);
+
   const normalizedQuery = searchQuery.trim().toUpperCase().replace(/\s+/g, "");
   const numericQuery = selectedSection && normalizedQuery.match(
     new RegExp(`^(?:${selectedSection.prefix})-?0*(\\d+)$`),
@@ -84,6 +127,11 @@ export default function SeatMap() {
           <div className="sections-divider mt-2 border-b border-black/30" />
 
           <div className="sections-content mt-2 flex-1 overflow-y-auto pr-1">
+            {catalogSyncError && (
+              <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="alert">
+                {catalogSyncError}
+              </p>
+            )}
             {isMapView ? (
               <div className="space-y-2">
                 <button
@@ -135,7 +183,9 @@ export default function SeatMap() {
 
                     <div className="bg-white rounded-xl border p-3 sm:p-4">
                       <p className="mb-4 text-center text-sm text-gray-600">
-                        Availability shown is mock recorded status. Viewing a seat does not claim it.
+                        {catalogSyncError
+                          ? "Database seat data could not be refreshed. Displayed statuses may be outdated."
+                          : "Seat status is loaded from the database. Viewing a seat does not claim it."}
                       </p>
 
                       <label className="relative mb-4 block">
@@ -147,8 +197,8 @@ export default function SeatMap() {
                             setSearchQuery(event.target.value);
                             setFocusedSeatId(null);
                           }}
-                          placeholder={`Search for a seat (e.g. ${selectedSection.prefix}-024)`}
-                          aria-label="Search seat number"
+                          placeholder="Search a seat by section seat label"
+                          aria-label="Search seat label"
                           className="h-[42px] w-full rounded-lg border py-2 pl-9 pr-20 outline-none focus:border-[#5B5FC7]"
                         />
                         {searchQuery && (
@@ -249,52 +299,79 @@ export default function SeatMap() {
                 <p className="sections-intro mb-3 text-sm text-gray-600">
                   View an available seat, go to the library, occupy the seat, then check in.
                 </p>
-                <p className="sections-source mb-3 text-xs text-gray-500">
-                  Prototype mock figures, not official live Balme Library statistics.
-                </p>
-                <div className="section-card-grid grid grid-cols-1 gap-3 lg:grid-cols-2">
-                  {currentSections.map((section) => {
-                    const availability = getSectionAvailability(section);
-                    const isOpen = section.status === "Open";
+                {sectionsLoading && (
+                  <p className="mb-3 text-xs text-gray-500" role="status">Loading library sections…</p>
+                )}
+                {sectionsError && (
+                  <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="alert">
+                    Unable to load library sections from Supabase: {sectionsError.message}
+                  </p>
+                )}
+                {!sectionsLoading && !sectionsError && supabaseSections?.length === 0 && (
+                  <p className="mb-3 rounded-lg border border-[#DDE3F2] bg-white p-3 text-sm text-gray-600">
+                    No library sections were returned by Supabase.
+                  </p>
+                )}
+                {!sectionsError && supabaseSections?.length > 0 && (
+                  <div className="section-card-grid grid grid-cols-1 gap-3 lg:grid-cols-2">
+                    {orderedSections.map((section) => {
+                    const seatSection = currentSections.find((item) => item.id === section.id);
+                    const databaseCounts = getSeatCountsForSection(databaseSeats, section.id);
+                    const isOpen = section.status?.toLowerCase() === "open";
+                    const displayStatus = isOpen ? "Open" : "Closed";
 
                     return (
                       <button
                         key={section.id}
                         type="button"
-                        disabled={!isOpen}
+                        disabled={!isOpen || !seatSection}
                         onClick={() => navigate(`/seatmap/${section.id}`)}
                         className="section-summary-card rounded-xl border bg-white p-4 text-left transition hover:border-[#5B5FC7] hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <h2 className="text-lg font-bold">{section.name}</h2>
+                            {section.description && (
+                              <p className="mt-1 text-sm text-gray-600">{section.description}</p>
+                            )}
                           </div>
                           <span className={`rounded-full px-3 py-1 text-sm font-semibold ${
                             isOpen ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
                           }`}>
-                            {section.status}
+                            {displayStatus}
                           </span>
                         </div>
 
-                        <div className="mt-3 flex items-end justify-between gap-3">
-                          <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-[#5B5FC7]">Available</p>
-                            <p className="text-4xl font-bold leading-none text-[#140B63]">{availability.available}</p>
+                        <div className="mt-4 grid grid-cols-2 gap-3">
+                          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 sm:p-4">
+                            <p className="text-xs font-bold uppercase tracking-wide text-emerald-800 sm:text-sm">Available Seats</p>
+                            <p className="mt-1 text-4xl font-extrabold leading-none text-emerald-900 sm:text-5xl">{databaseCounts?.available ?? "—"}</p>
                           </div>
-                          <p className="text-sm text-gray-500">{availability.total} total seats</p>
-                        </div>
-                        <div className="mt-3 grid grid-cols-2 gap-2 border-t border-gray-100 pt-3 text-sm sm:grid-cols-3">
-                          <p className="text-gray-600"><span className="font-semibold text-gray-800">{availability.occupied}</span> Occupied</p>
-                          <p className="text-gray-600"><span className="font-semibold text-gray-800">{availability.unavailable}</span> Unavailable</p>
-                          <p className="text-gray-600"><span className="font-semibold text-gray-800">{availability.total}</span> Total</p>
+                          <div className="rounded-xl border border-[#DDE3F2] bg-[#FCFCFF] p-3 sm:p-4">
+                            <p className="text-xs font-bold uppercase tracking-wide text-gray-600 sm:text-sm">Total Seats</p>
+                            <p className="mt-1 text-3xl font-bold leading-none text-[#140B63] sm:text-4xl">{databaseCounts?.total ?? "—"}</p>
+                          </div>
+                          <div className="rounded-lg border border-[#F1DADA] bg-[#FFF8F8] p-3">
+                            <p className="text-xs font-semibold text-gray-600 sm:text-sm">Occupied</p>
+                            <p className="mt-1 text-2xl font-bold leading-none text-[#713B3B] sm:text-3xl">{databaseCounts?.occupied ?? "—"}</p>
+                          </div>
+                          <div className="rounded-lg border border-[#ECE7CF] bg-[#FFFEF8] p-3">
+                            <p className="text-xs font-semibold text-gray-600 sm:text-sm">Unavailable</p>
+                            <p className="mt-1 text-2xl font-bold leading-none text-[#554D2B] sm:text-3xl">{databaseCounts?.unavailable ?? "—"}</p>
+                          </div>
                         </div>
                         <p className="mt-3 text-sm font-medium text-[#5B5FC7]">
-                          {isOpen ? "View seat map →" : "This section is closed"}
+                          {!seatSection
+                            ? "Seat data is not available for this section"
+                            : isOpen
+                              ? "View seat map →"
+                              : "This section is closed"}
                         </p>
                       </button>
                     );
                   })}
-                </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

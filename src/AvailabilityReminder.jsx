@@ -2,6 +2,7 @@ import { CheckCircle2, Clock3 } from "lucide-react";
 
 export default function AvailabilityReminder({
   session,
+  sessionLoading,
   checkInConfirmation,
   checkoutConfirmation,
   activeSessionVisible,
@@ -49,6 +50,8 @@ export default function AvailabilityReminder({
       </aside>
     );
   }
+
+  if (sessionLoading) return null;
 
   const warningOpacity = Math.max(0, 1 - contentScrollTop / 64);
   const warningHidden = warningDismissed;

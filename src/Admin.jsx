@@ -9,35 +9,31 @@ export default function Admin() {
   const navigate = useNavigate();
   const { profile, loading: authLoading, signIn } = useAuth();
   const [showPin, setShowPin] = useState(false);
-<<<<<<< HEAD
   const [username, setUsername] = useState("");
-=======
-  const [email, setEmail] = useState("");
->>>>>>> 493150d2c0828f1d32c652a8a8210939d5bc0637
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!authLoading && profile) {
-      navigate(profile.role === "admin" ? "/admin/dashboard" : "/dashboard", { replace: true });
+      navigate(profile.role === "admin"
+        ? profile.must_change_password ? "/admin/change-password" : "/admin/dashboard"
+        : "/dashboard", { replace: true });
     }
   }, [authLoading, navigate, profile]);
 
   const handleLogin = async () => {
     setSubmitting(true);
     setLoginError("");
-<<<<<<< HEAD
     const result = await signIn(username, password, "admin");
-=======
-    const result = await signIn(email, password, "admin");
->>>>>>> 493150d2c0828f1d32c652a8a8210939d5bc0637
     setSubmitting(false);
     if (!result.ok) {
       setLoginError(result.message);
       return;
     }
-    navigate("/admin/dashboard", { replace: true });
+    navigate(result.profile?.must_change_password
+      ? "/admin/change-password"
+      : "/admin/dashboard", { replace: true });
   };
 
   return (
@@ -65,7 +61,7 @@ export default function Admin() {
           Admin Login
         </h2>
         <p className="mt-2 max-w-md text-xs text-white/80" role="note">
-          Prototype login: use the configured Admin ID and shared PIN.
+          Sign in with your administrator ID and password. You will set a personal password on first login.
         </p>
 
         {/* FORM */}
@@ -94,42 +90,24 @@ export default function Admin() {
             </button>
           </div>
 
-<<<<<<< HEAD
             {/* ADMIN ID */}
           <input
             type="text"
-            aria-label="Admin ID"
-            placeholder="Admin ID"
+            placeholder="Administrator ID (admin001)"
             autoComplete="username"
             value={username}
             onChange={(event) => setUsername(event.target.value)}
-=======
-            {/* ADMIN EMAIL */}
-          <input
-            type="email"
-            placeholder="Admin Email"
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
->>>>>>> 493150d2c0828f1d32c652a8a8210939d5bc0637
             className="w-full h-[45px] px-4 rounded border border-white/40
             bg-[#B9D9EB]/20 text-white placeholder:text-white/50
             outline-none focus:border-[#F47C5C] transition"
           />
         <div className="relative w-full">
 
-            {/* PIN */}
+            {/* PASSWORD */}
           <input
             type={showPin ? "text" : "password"}
-<<<<<<< HEAD
-            inputMode="numeric"
-            aria-label="PIN"
-            placeholder="PIN"
-            autoComplete="off"
-=======
             placeholder="Password"
             autoComplete="current-password"
->>>>>>> 493150d2c0828f1d32c652a8a8210939d5bc0637
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             className="w-full h-[45px] px-4 pr-12 rounded border border-white/40

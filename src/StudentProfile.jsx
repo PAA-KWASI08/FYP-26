@@ -48,19 +48,17 @@ export default function StudentProfile() {
           </div>
           <div className="min-w-0">
             <h2 className="text-xl font-bold text-[#140B63]">{display(profile.full_name)}</h2>
-            <p className="mt-1 text-sm text-gray-600">Student ID: {display(profile.student_id)}</p>
           </div>
         </section>
 
         <p className="rounded-lg border border-[#DDE3F2] bg-white px-3 py-2.5 text-sm text-gray-600">
-          Prototype profile information is loaded from the configured student ID.
+          Your display name is a demo pseudonym stored in your account profile.
         </p>
 
         <section className="rounded-xl border border-[#DDE3F2] bg-[#FCFCFF] p-4 shadow-sm sm:p-5">
           <h2 className="text-lg font-bold text-[#140B63]">Personal Information</h2>
           <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             <ProfileField label="Full Name" value={display(profile.full_name)} />
-            <ProfileField label="Student ID" value={display(profile.student_id)} />
             <ProfileField label="Programme" value={display(profile.programme)} />
             <ProfileField label="Department" value={display(profile.department)} />
             <ProfileField label="Level" value={display(profile.level)} />
@@ -74,6 +72,18 @@ export default function StudentProfile() {
             <ProfileField label="Email" value={display(profile.email)} />
             <ProfileField label="Account Status" value={display(profile.account_status)} />
           </dl>
+        </section>
+
+        <section className="rounded-xl border border-[#DDE3F2] bg-white p-4 shadow-sm sm:p-5">
+          <h2 className="text-lg font-bold text-[#140B63]">Account Security</h2>
+          <p className="mt-1 text-sm text-gray-600">Update your account password at any time.</p>
+          <button
+            type="button"
+            onClick={() => navigate("/change-password")}
+            className="mt-3 min-h-10 rounded-lg border border-[#DDE3F2] px-4 py-2 text-sm font-semibold text-[#140B63] hover:bg-[#F8F8FF]"
+          >
+            Change password
+          </button>
         </section>
       </div>
     </div>

@@ -1,66 +1,3 @@
-function createSeats(prefix, total, available, occupied, statusOverrides = {}) {
-  return Array.from({ length: total }, (_, index) => {
-    const seatNumber = index + 1;
-    const seatCode = `${prefix}-${String(seatNumber).padStart(3, "0")}`;
-    const status = statusOverrides[seatCode] ?? (index < available
-      ? "Available"
-      : index < available + occupied
-        ? "Occupied"
-        : "Unavailable");
-
-    return {
-      id: `${prefix}-${seatNumber}`,
-      seatCode,
-      qrIdentifier: seatCode,
-      status,
-      unavailableReason: status === "Unavailable" ? "Maintenance" : null,
-    };
-  });
-}
-
-export const sections = [
-  {
-    id: "reference-hall",
-    name: "Reference Hall",
-    prefix: "RH",
-    status: "Open",
-    seats: createSeats("RH", 48, 26, 18, {
-      "RH-025": "Occupied",
-      "RH-027": "Available",
-      "RH-030": "Unavailable",
-      "RH-045": "Occupied",
-    }),
-  },
-  {
-    id: "students-reference",
-    name: "Students' Reference",
-    prefix: "SR",
-    status: "Open",
-    seats: createSeats("SR", 36, 18, 15),
-  },
-  {
-    id: "africana",
-    name: "Africana",
-    prefix: "AF",
-    status: "Open",
-    seats: createSeats("AF", 24, 12, 10),
-  },
-  {
-    id: "iac",
-    name: "IAC",
-    prefix: "IAC",
-    status: "Open",
-    seats: createSeats("IAC", 20, 9, 9),
-  },
-  {
-    id: "e-resources",
-    name: "E-Resources",
-    prefix: "ER",
-    status: "Closed",
-    seats: createSeats("ER", 16, 0, 0),
-  },
-];
-
 export function getSeatStatus(seat) {
   return seat.status;
 }
@@ -78,7 +15,7 @@ export function getSectionAvailability(section) {
   );
 }
 
-export function getLibraryAvailability(librarySections = sections) {
+export function getLibraryAvailability(librarySections) {
   return librarySections.reduce(
     (totals, section) => {
       const counts = getSectionAvailability(section);

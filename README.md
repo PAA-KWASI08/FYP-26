@@ -1,10 +1,12 @@
 # Scan2Seat
 
-## Prototype login
+## Authentication and location checks
 
-The student and administrator login screens use local prototype credentials and do not call Supabase Auth. The shared prototype PIN is `1234`; the administrator ID is `admin001`. Student IDs and their profile information are listed in [`src/lib/prototypeCredentials.js`](./src/lib/prototypeCredentials.js). Add another student by adding an object there with a unique 8-digit `studentId` and the profile fields; all configured students use the shared PIN.
+The configured database student accounts and administrator authenticate through Supabase Auth. Admin database operations require an active administrator profile and are authorized on the server from the signed-in user's Auth identity; the former browser-visible admin ID/PIN authorization has been removed. Some unprovisioned legacy demo student identities may still use prototype authentication and must not be treated as secure accounts.
 
-Prototype authentication is used during development and testing. It is not production authentication or secure authorization: credentials and client-side checks are visible and modifiable in the browser. Production deployment should replace this mechanism with institutional authentication and secure server-side authorization.
+Student check-in requests a recent device location and checks it against a 30 m geofence centered on the configured Balme Library point in `src/lib/geofence.js`. The database repeats the boundary check before occupying a seat. While an authenticated student session is active, the browser reports location samples to Supabase. Ten continuous minutes outside triggers an in-app alert in the admin interface; the admin has five minutes to release the seat, after which a scheduled database job automatically ends the session and makes the seat available.
+
+These checks depend on browser location permission, device positioning, network availability, and the student page remaining open to report movement. Device/browser locations can be inaccurate or spoofed; the point is not a surveyed building outline, so this is not tamper-proof proof of physical presence or an institutional production attestation.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

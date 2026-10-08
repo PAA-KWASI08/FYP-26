@@ -13,29 +13,49 @@ import {
   Bell,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { getLibraryAvailability } from "./sections";
 import { useStudentSession } from "./studentSession";
 import ConfirmationDialog from "./ConfirmationDialog";
 import StudentProfileMenu from "./StudentProfileMenu";
 import { getActiveAnnouncements } from "./announcementData";
-import { useAuth } from "./useAuth";
+
+function formatClock(totalSeconds) {
+  const seconds = Math.max(0, totalSeconds);
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+  return [hours, minutes, remainingSeconds]
+    .map((part) => String(part).padStart(2, "0"))
+    .join(":");
+}
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const {
-    sections,
+    databaseSeats,
+    catalogSyncError,
     session,
     lastSession,
     checkout,
     currentStudentId,
+    student,
     announcements,
   } = useStudentSession();
-  const { profile } = useAuth();
   const [now, setNow] = useState(() => Date.now());
   const [pendingCheckoutSession, setPendingCheckoutSession] = useState(null);
   const [checkoutError, setCheckoutError] = useState("");
-  const availability = getLibraryAvailability(sections);
+  const [browserNotificationPermission, setBrowserNotificationPermission] = useState(
+    () => (typeof Notification === "undefined" ? "unsupported" : Notification.permission),
+  );
+  const availability = !catalogSyncError && Array.isArray(databaseSeats)
+    ? databaseSeats.reduce((counts, seat) => {
+      counts.total += 1;
+      if (seat.status === "available") counts.available += 1;
+      else if (seat.status === "occupied") counts.occupied += 1;
+      else if (seat.status === "unavailable") counts.unavailable += 1;
+      return counts;
+    }, { total: 0, available: 0, occupied: 0, unavailable: 0 })
+    : null;
   const latestAnnouncement = getActiveAnnouncements(announcements, session?.sectionId)[0];
 
   useEffect(() => {
@@ -60,14 +80,27 @@ export default function Dashboard() {
     }).format(date);
 
   const formatDuration = (start, end) => {
-    const minutes = Math.max(0, Math.floor((end - start) / 60000));
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return hours > 0 ? `${hours}h ${remainingMinutes}m` : `${remainingMinutes}m`;
+    const elapsedSeconds = Math.max(0, Math.floor((end - start) / 1000));
+    return formatClock(elapsedSeconds);
   };
 
-  const confirmCheckout = () => {
-    const result = checkout(pendingCheckoutSession?.id, currentStudentId);
+  const plannedEnd = session?.plannedDurationMinutes
+    ? new Date(new Date(session.checkInTime).getTime() + session.plannedDurationMinutes * 60_000)
+    : null;
+  const plannedRemainingMs = plannedEnd ? plannedEnd.getTime() - now : null;
+  const showPlannedReminder = plannedRemainingMs !== null && plannedRemainingMs <= 5 * 60_000;
+  const enableBrowserNotifications = async () => {
+    if (typeof Notification === "undefined") return;
+    try {
+      const permission = await Notification.requestPermission();
+      setBrowserNotificationPermission(permission);
+    } catch (error) {
+      console.error("Unable to request browser study reminders:", error);
+    }
+  };
+
+  const confirmCheckout = async () => {
+    const result = await checkout(pendingCheckoutSession?.id, currentStudentId);
     if (!result.ok) setCheckoutError(result.message);
     setPendingCheckoutSession(null);
   };
@@ -115,7 +148,7 @@ export default function Dashboard() {
                 Welcome Back,
               </h2>
 
-              <h1 className="text-3xl sm:text-4xl font-bold mt-1 truncate" title={profile.full_name}>{profile.full_name}</h1>
+              <h1 className="text-3xl sm:text-4xl font-bold mt-1 truncate" title={student.fullName}>{student.fullName}</h1>
             </div>
 
             <StudentProfileMenu />
@@ -125,7 +158,9 @@ export default function Dashboard() {
 
           {/* STATS */}
           <h2 className="dashboard-stats-heading mt-2 text-lg font-bold text-[#140B63]">Current Availability</h2>
-          <p className="dashboard-stats-note text-xs text-gray-500">Mock availability figures for the prototype</p>
+          <p className="dashboard-stats-note text-xs text-gray-500">
+            {catalogSyncError || "Live seat status from the database"}
+          </p>
           <div className="dashboard-stats mt-2 grid auto-rows-fr grid-cols-2 xl:grid-cols-4 gap-2 items-stretch">
             <div className="dashboard-stat-card order-1 min-h-[76px] bg-white p-3 rounded-xl border flex flex-col justify-between">
               <div className="flex items-start gap-2 min-w-0">
@@ -134,7 +169,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="min-w-0">
-                  <h1 className="text-2xl xl:text-3xl font-bold">{availability.total}</h1>
+                  <h1 className="text-3xl xl:text-4xl font-bold">{availability?.total ?? "—"}</h1>
                   <h2 className="font-bold text-base xl:text-lg line-clamp-1">Total Seats</h2>
                 </div>
               </div>
@@ -147,7 +182,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="min-w-0">
-                  <h1 className="text-2xl xl:text-3xl font-bold">{availability.available}</h1>
+                  <h1 className="text-3xl xl:text-4xl font-bold">{availability?.available ?? "—"}</h1>
                   <h2 className="font-bold text-base xl:text-lg line-clamp-1">Available</h2>
                 </div>
               </div>
@@ -160,7 +195,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="min-w-0">
-                  <h1 className="text-2xl xl:text-3xl font-bold">{availability.occupied}</h1>
+                  <h1 className="text-3xl xl:text-4xl font-bold">{availability?.occupied ?? "—"}</h1>
                   <h2 className="font-bold text-base xl:text-lg line-clamp-1">Occupied Seats</h2>
                   <p className="text-gray-500 text-sm line-clamp-2">Currently in use</p>
                 </div>
@@ -174,7 +209,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="min-w-0">
-                  <h1 className="text-2xl xl:text-3xl font-bold">{availability.unavailable}</h1>
+                  <h1 className="text-3xl xl:text-4xl font-bold">{availability?.unavailable ?? "—"}</h1>
                   <h2 className="font-bold text-base xl:text-lg line-clamp-1">Unavailable</h2>
                   <p className="text-gray-500 text-sm line-clamp-2">Not available for use</p>
                 </div>
@@ -205,29 +240,67 @@ export default function Dashboard() {
             </div>
 
             {session ? (
-              <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto] md:items-center">
-                <div className="rounded-xl border border-[#DCE2F0] bg-white/80 p-3">
-                  <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-                    <div>
-                      <p className="text-xs text-gray-500">Section</p>
-                      <p className="font-semibold text-[#140B63]">{session.section}</p>
+              <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch">
+                <div className="flex flex-col justify-between gap-5 rounded-xl border border-[#DCE2F0] bg-white/80 p-4 sm:p-5">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                      <Armchair className="h-9 w-9" aria-label="Seat occupied by your active session" />
                     </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Seat</p>
-                      <p className="font-semibold text-[#140B63]">{session.seat}</p>
+                    <div className="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-500">Section</p>
+                        <p className="truncate text-xl font-bold text-[#140B63] sm:text-2xl">{session.section}</p>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-500">Seat</p>
+                        <p className="text-xl font-bold text-[#140B63] sm:text-2xl">{session.seat}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Started</p>
-                      <p className="font-semibold text-[#140B63]">{formatTime(session.checkInTime)}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg bg-[#F5F6FC] p-3">
+                      <p className="text-sm text-gray-500">Started</p>
+                      <p className="text-base font-semibold text-[#140B63] sm:text-lg">{formatTime(session.checkInTime)}</p>
                     </div>
-                    <div className="ml-auto">
-                      <p className="text-xs text-gray-500">Study time</p>
-                      <p className="text-lg font-bold text-[#140B63]">
+                    <div className="rounded-lg bg-[#F5F6FC] p-3">
+                      <p className="text-sm text-gray-500">Study time</p>
+                      <p className="text-lg font-bold tabular-nums text-[#140B63] sm:text-xl" aria-live="off">
                         {formatDuration(session.checkInTime, new Date(now))}
                       </p>
                     </div>
                   </div>
-                  <p className="mt-2 text-xs text-gray-500">Frontend demo session; this is not saved.</p>
+                  {plannedEnd && (
+                    <div className="rounded-lg border border-[#DDE3F2] bg-[#F8F9FF] p-3">
+                      <p className="text-sm text-gray-500">Planned study time</p>
+                      <p className="mt-1 text-sm font-semibold text-[#140B63]">
+                        {session.plannedDurationMinutes} minutes · ends at {formatTime(plannedEnd)}
+                      </p>
+                      {showPlannedReminder && (
+                        <p className={`mt-2 text-sm font-semibold ${
+                          plannedRemainingMs <= 0 ? "text-rose-800" : "text-amber-900"
+                        }`} role="status" aria-live="polite">
+                          {plannedRemainingMs <= 0
+                            ? "Your planned study time has ended. Your seat is still checked in; check out when you are ready."
+                            : `Your planned study time ends in ${formatClock(Math.ceil(plannedRemainingMs / 1000))}. Check out when you are ready.`}
+                        </p>
+                      )}
+                      {browserNotificationPermission === "default" && (
+                        <button
+                          type="button"
+                          onClick={enableBrowserNotifications}
+                          className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-[#140B63] underline underline-offset-2"
+                        >
+                          <Bell className="h-4 w-4" aria-hidden="true" />
+                          Enable browser reminders
+                        </button>
+                      )}
+                      {browserNotificationPermission === "denied" && (
+                        <p className="mt-2 text-xs text-gray-600">
+                          Browser reminders are blocked. The reminder will appear here while the app is open.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -235,7 +308,7 @@ export default function Dashboard() {
                     setCheckoutError("");
                     setPendingCheckoutSession(session);
                   }}
-                  className="rounded-lg bg-[#140B63] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#251b79] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B5FC7]"
+                  className="rounded-lg bg-[#140B63] px-5 py-3 text-base font-semibold text-white transition hover:bg-[#251b79] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B5FC7] lg:self-center"
                 >
                   Check Out
                 </button>

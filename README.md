@@ -1,4 +1,10 @@
-# React + Vite
+# Scan2Seat
+
+## Prototype login
+
+The student and administrator login screens use local prototype credentials and do not call Supabase Auth. The shared prototype PIN is `1234`; the administrator ID is `admin001`. Student IDs and their profile information are listed in [`src/lib/prototypeCredentials.js`](./src/lib/prototypeCredentials.js). Add another student by adding an object there with a unique 8-digit `studentId` and the profile fields; all configured students use the shared PIN.
+
+Prototype authentication is used during development and testing. It is not production authentication or secure authorization: credentials and client-side checks are visible and modifiable in the browser. Production deployment should replace this mechanism with institutional authentication and secure server-side authorization.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

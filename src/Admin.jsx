@@ -1,12 +1,36 @@
 import libraryImage from "./assets/images/balme-library.jpg";
 import scan2seat from "./assets/images/scan2seat.png";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "./useAuth";
 
 export default function Admin() {
   const navigate = useNavigate();
+  const { profile, loading: authLoading, signIn } = useAuth();
   const [showPin, setShowPin] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && profile) {
+      navigate(profile.role === "admin" ? "/admin/dashboard" : "/dashboard", { replace: true });
+    }
+  }, [authLoading, navigate, profile]);
+
+  const handleLogin = async () => {
+    setSubmitting(true);
+    setLoginError("");
+    const result = await signIn(username, password, "admin");
+    setSubmitting(false);
+    if (!result.ok) {
+      setLoginError(result.message);
+      return;
+    }
+    navigate("/admin/dashboard", { replace: true });
+  };
 
   return (
     <div className="min-h-screen flex flex-row relative">
@@ -32,6 +56,9 @@ export default function Admin() {
         <h2 className="text-lg md:text-2xl font-bold mt-6 md:mt-16">
           Admin Login
         </h2>
+        <p className="mt-2 max-w-md text-xs text-white/80" role="note">
+          Prototype login: use the configured Admin ID and shared PIN.
+        </p>
 
         {/* FORM */}
         <div className="mt-8 flex flex-col gap-4 w-full max-w-md">
@@ -59,20 +86,29 @@ export default function Admin() {
             </button>
           </div>
 
-            {/* EMAIL/ID*/}
+            {/* ADMIN ID */}
           <input
             type="text"
-            placeholder="Admin Email/ID"
+            aria-label="Admin ID"
+            placeholder="Admin ID"
+            autoComplete="username"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
             className="w-full h-[45px] px-4 rounded border border-white/40
             bg-[#B9D9EB]/20 text-white placeholder:text-white/50
             outline-none focus:border-[#F47C5C] transition"
           />
         <div className="relative w-full">
 
-            {/* PASSWORD */}
+            {/* PIN */}
           <input
             type={showPin ? "text" : "password"}
-            placeholder="Password"
+            inputMode="numeric"
+            aria-label="PIN"
+            placeholder="PIN"
+            autoComplete="off"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
             className="w-full h-[45px] px-4 pr-12 rounded border border-white/40
             bg-[#B9D9EB]/20 text-white placeholder:text-white/50
             outline-none focus:border-[#F47C5C] transition"
@@ -90,11 +126,15 @@ export default function Admin() {
 
           <button
             type="button"
-            onClick={() => navigate("/admin/dashboard")}
+            onClick={handleLogin}
+            disabled={submitting || authLoading}
             className="w-full h-[45px] bg-[#F47C5C] hover:bg-[#f26d4d]
-            border border-white/40 rounded text-white font-semibold transition">
-            🔒 Admin Login
+            disabled:cursor-wait disabled:opacity-70 border border-white/40 rounded text-white font-semibold transition">
+            {submitting ? "Signing In…" : "🔒 Admin Login"}
           </button>
+          {loginError && (
+            <p className="text-sm text-center text-white" role="alert">{loginError}</p>
+          )}
 
         </div>
       </div>

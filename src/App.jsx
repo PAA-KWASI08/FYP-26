@@ -1,14 +1,25 @@
 import libraryImage from "./assets/images/balme-library.jpg";
 import scan2seat from "./assets/images/scan2seat.png";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "./useAuth";
 
 export default function App() {
   const navigate = useNavigate();
+  const { profile, loading: authLoading, signIn } = useAuth();
   const [showPin, setShowPin] = useState(false);
-  const [showForgot, setShowForgot] = useState(false);
   const [selectedRole, setSelectedRole] = useState("student");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && profile) {
+      navigate(profile.role === "admin" ? "/admin/dashboard" : "/dashboard", { replace: true });
+    }
+  }, [authLoading, navigate, profile]);
 
   const selectRole = (role) => {
     setSelectedRole(role);
@@ -16,6 +27,18 @@ export default function App() {
     if (role === "admin") {
       navigate("/admin");
     }
+  };
+
+  const handleLogin = async () => {
+    setSubmitting(true);
+    setLoginError("");
+    const result = await signIn(username, password, "student");
+    setSubmitting(false);
+    if (!result.ok) {
+      setLoginError(result.message);
+      return;
+    }
+    navigate("/dashboard", { replace: true });
   };
 
   return (
@@ -43,6 +66,9 @@ export default function App() {
         <h2 className="text-lg md:text-2xl font-bold mt-6 md:mt-16">
           Welcome Back!
         </h2>
+        <p className="mt-2 max-w-md text-xs text-white/80" role="note">
+          Prototype login: enter an 8-digit Student ID and the shared PIN.
+        </p>
 
         {/* FORM */}
         <div className="mt-8 flex flex-col gap-4 w-full max-w-md">
@@ -87,11 +113,16 @@ export default function App() {
             </div>
           </div>
 
-          {/* STUDENT ID*/}
+          {/* STUDENT ID */}
           <input
             type="text"
-            placeholder="Student ID (e.g. 22259801)"
-            maxLength={8}
+            inputMode="numeric"
+            pattern="[0-9]{8}"
+            aria-label="Student ID"
+            placeholder="Student ID"
+            autoComplete="username"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
             className="w-full h-[45px] px-4 rounded border border-white/40
             bg-[#B9D9EB]/20 text-white placeholder:text-white/50
             outline-none focus:border-[#F47C5C] transition"
@@ -101,13 +132,17 @@ export default function App() {
             {/* PIN */}
           <input
             type={showPin ? "text" : "password"}
-            placeholder="PIN (5 digit password)"
-            maxLength={5}
+            inputMode="numeric"
+            aria-label="PIN"
+            placeholder="PIN"
+            autoComplete="off"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
             className="w-full h-[45px] px-4 pr-12 rounded border border-white/40
             bg-[#B9D9EB]/20 text-white placeholder:text-white/50
             outline-none focus:border-[#F47C5C] transition"
           />
-             {/* PIN VISIBILITY ICON */}
+             {/* PASSWORD VISIBILITY ICON */}
            <button
            type="button"
            onClick={() => setShowPin(!showPin)}
@@ -119,119 +154,19 @@ export default function App() {
 
             {/* LOGIN */}
           <button
-            onClick={() => navigate("/dashboard")}
+            type="button"
+            onClick={handleLogin}
+            disabled={submitting || authLoading}
             className="w-full h-[45px] bg-[#F47C5C]
-            hover:bg-[#f26d4d] border border-white/40
+            hover:bg-[#f26d4d] disabled:cursor-wait disabled:opacity-70 border border-white/40
             rounded text-white font-semibold transition"
           >
-           🔒 Log In
+           {submitting ? "Signing In…" : "🔒 Log In"}
           </button>
+          {loginError && (
+            <p className="text-sm text-center text-white" role="alert">{loginError}</p>
+          )}
           
-           {/* FORGOT EMAIL/ID OR PIN*/}
-          <p 
-           onClick={() => setShowForgot(true)}
-           className="text-sm text-white/70 text-center hover:text-white cursor-pointer"
-           >
-            Forgot Email/ID or Pin?
-          </p>
-            
-          {/* POP UP FORM FOR FORGOT ID*/}
-          {showForgot && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
-
-             {/* MODAL BOX */}
-             <div className="w-[90%] max-w-md bg-[#B9D9EB]/20 text-white p-6 rounded-lg border border-white/20">
-
-             <h2 className="text-xl font-bold mb-4">
-             Recover Account
-             </h2>
-
-            {/* LEVEL */}
-            <select
-             className="w-full h-[45px] mb-3 px-3 rounded
-             bg-[#140B63] text-white border border-white/30
-             outline-none focus:border-[#F47C5C] transition"
-            >
-            <option value="" className="bg-[#140B63] text-white">
-               Select Level
-            </option>
-            <option value="L100" className="bg-[#140B63] text-white">
-               L100
-            </option>
-            <option value="L200" className="bg-[#140B63] text-white">
-               L200
-            </option>
-            <option value="L300" className="bg-[#140B63] text-white">
-               L300
-            </option>
-            <option value="L400" className="bg-[#140B63] text-white">
-               L400
-            </option>
-            </select>
-
-            {/* DEPARTMENT */}
-            <select
-             className="w-full h-[45px] mb-3 px-3 rounded
-             bg-[#140B63] text-white border border-white/30
-             outline-none focus:border-[#F47C5C] transition"
->
-            <option value="" className="bg-[#140B63] text-white">
-             Select Department
-            </option>
-            <option className="bg-[#140B63] text-white">
-               Computer Science
-            </option>
-            <option className="bg-[#140B63] text-white">
-               Mathematics
-            </option>
-            <option className="bg-[#140B63] text-white">
-               Statistics
-            </option>
-            <option className="bg-[#140B63] text-white">
-               Geography
-            </option>
-            <option className="bg-[#140B63] text-white">
-               Political Science
-            </option>
-            <option className="bg-[#140B63] text-white">
-               Education
-            </option>
-            </select>
-
-            {/* EMAIL OR ID */}
-            <input
-            type="text"
-            placeholder="Enter Student ID or Email"
-            maxLength={8}
-            className="w-full h-[45px] mb-4 px-3 rounded bg-[#140B63] border border-white/30 outline-none"
-            />
-
-            {/* BUTTONS */}
-             <div className="flex gap-3">
-
-             <button
-             className="flex-1 h-[40px] bg-[#F47C5C] rounded hover:bg-[#f26d4d]"
-             >
-              Submit
-             </button>
-
-             <button
-             onClick={() => setShowForgot(false)}
-             className="flex-1 h-[40px] border border-white/40 rounded hover:bg-white/10"
-             >
-             Cancel
-             </button>
-
-             </div>
-
-             <p className="text-xs text-white/60 mt-3">
-              Your request will be sent to the admin for recovery instructions.
-             </p>
-
-          </div>
-          </div>
-        )}
-
         </div>
       </div>
 

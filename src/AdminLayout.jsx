@@ -27,7 +27,7 @@ const navigationItems = [
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signOut } = useAuth();
+  const { profile, signOut } = useAuth();
   const [expanded, setExpanded] = useState(() => window.matchMedia("(min-width: 768px)").matches);
 
   useEffect(() => {
@@ -141,8 +141,8 @@ export default function AdminLayout() {
               A
             </span>
             <span className="hidden sm:block">
-              <span className="block text-sm font-bold text-[#140B63]">Admin</span>
-              <span className="block text-xs text-gray-500">Library Administrator</span>
+              <span className="block text-sm font-bold text-[#140B63]">{profile.full_name}</span>
+              <span className="block text-xs text-gray-500">Administrator</span>
             </span>
           </div>
         </header>

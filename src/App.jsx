@@ -10,7 +10,11 @@ export default function App() {
   const { profile, loading: authLoading, signIn } = useAuth();
   const [showPin, setShowPin] = useState(false);
   const [selectedRole, setSelectedRole] = useState("student");
+<<<<<<< HEAD
   const [username, setUsername] = useState("");
+=======
+  const [email, setEmail] = useState("");
+>>>>>>> 493150d2c0828f1d32c652a8a8210939d5bc0637
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -32,7 +36,11 @@ export default function App() {
   const handleLogin = async () => {
     setSubmitting(true);
     setLoginError("");
+<<<<<<< HEAD
     const result = await signIn(username, password, "student");
+=======
+    const result = await signIn(email, password, "student");
+>>>>>>> 493150d2c0828f1d32c652a8a8210939d5bc0637
     setSubmitting(false);
     if (!result.ok) {
       setLoginError(result.message);
@@ -113,6 +121,7 @@ export default function App() {
             </div>
           </div>
 
+<<<<<<< HEAD
           {/* STUDENT ID */}
           <input
             type="text"
@@ -123,19 +132,33 @@ export default function App() {
             autoComplete="username"
             value={username}
             onChange={(event) => setUsername(event.target.value)}
+=======
+          {/* STUDENT EMAIL */}
+          <input
+            type="email"
+            placeholder="Student Email"
+            autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+>>>>>>> 493150d2c0828f1d32c652a8a8210939d5bc0637
             className="w-full h-[45px] px-4 rounded border border-white/40
             bg-[#B9D9EB]/20 text-white placeholder:text-white/50
             outline-none focus:border-[#F47C5C] transition"
           />
           <div className="relative w-full">
 
-            {/* PIN */}
+            {/* PASSWORD */}
           <input
             type={showPin ? "text" : "password"}
+<<<<<<< HEAD
             inputMode="numeric"
             aria-label="PIN"
             placeholder="PIN"
             autoComplete="off"
+=======
+            placeholder="Password"
+            autoComplete="current-password"
+>>>>>>> 493150d2c0828f1d32c652a8a8210939d5bc0637
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             className="w-full h-[45px] px-4 pr-12 rounded border border-white/40
@@ -167,6 +190,114 @@ export default function App() {
             <p className="text-sm text-center text-white" role="alert">{loginError}</p>
           )}
           
+<<<<<<< HEAD
+=======
+           {/* FORGOT EMAIL OR PASSWORD */}
+          <p 
+           onClick={() => setShowForgot(true)}
+           className="text-sm text-white/70 text-center hover:text-white cursor-pointer"
+           >
+            Forgot email or password?
+          </p>
+            
+          {/* POP UP FORM FOR FORGOT ID*/}
+          {showForgot && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
+
+             {/* MODAL BOX */}
+             <div className="w-[90%] max-w-md bg-[#B9D9EB]/20 text-white p-6 rounded-lg border border-white/20">
+
+             <h2 className="text-xl font-bold mb-4">
+             Recover Account
+             </h2>
+
+            {/* LEVEL */}
+            <select
+             className="w-full h-[45px] mb-3 px-3 rounded
+             bg-[#140B63] text-white border border-white/30
+             outline-none focus:border-[#F47C5C] transition"
+            >
+            <option value="" className="bg-[#140B63] text-white">
+               Select Level
+            </option>
+            <option value="L100" className="bg-[#140B63] text-white">
+               L100
+            </option>
+            <option value="L200" className="bg-[#140B63] text-white">
+               L200
+            </option>
+            <option value="L300" className="bg-[#140B63] text-white">
+               L300
+            </option>
+            <option value="L400" className="bg-[#140B63] text-white">
+               L400
+            </option>
+            </select>
+
+            {/* DEPARTMENT */}
+            <select
+             className="w-full h-[45px] mb-3 px-3 rounded
+             bg-[#140B63] text-white border border-white/30
+             outline-none focus:border-[#F47C5C] transition"
+>
+            <option value="" className="bg-[#140B63] text-white">
+             Select Department
+            </option>
+            <option className="bg-[#140B63] text-white">
+               Computer Science
+            </option>
+            <option className="bg-[#140B63] text-white">
+               Mathematics
+            </option>
+            <option className="bg-[#140B63] text-white">
+               Statistics
+            </option>
+            <option className="bg-[#140B63] text-white">
+               Geography
+            </option>
+            <option className="bg-[#140B63] text-white">
+               Political Science
+            </option>
+            <option className="bg-[#140B63] text-white">
+               Education
+            </option>
+            </select>
+
+            {/* EMAIL OR ID */}
+            <input
+            type="text"
+            placeholder="Enter Student ID or Email"
+            maxLength={8}
+            className="w-full h-[45px] mb-4 px-3 rounded bg-[#140B63] border border-white/30 outline-none"
+            />
+
+            {/* BUTTONS */}
+             <div className="flex gap-3">
+
+             <button
+             className="flex-1 h-[40px] bg-[#F47C5C] rounded hover:bg-[#f26d4d]"
+             >
+              Submit
+             </button>
+
+             <button
+             onClick={() => setShowForgot(false)}
+             className="flex-1 h-[40px] border border-white/40 rounded hover:bg-white/10"
+             >
+             Cancel
+             </button>
+
+             </div>
+
+             <p className="text-xs text-white/60 mt-3">
+              Your request will be sent to the admin for recovery instructions.
+             </p>
+
+          </div>
+          </div>
+        )}
+
+>>>>>>> 493150d2c0828f1d32c652a8a8210939d5bc0637
         </div>
       </div>
 

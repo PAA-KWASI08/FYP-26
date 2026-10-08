@@ -28,7 +28,7 @@ function createLocalDemoAuthState(role, studentId = null) {
     : {
       id,
       student_id: null,
-      full_name: "Prototype Administrator",
+      full_name: prototypeAdminId,
       programme: null,
       department: null,
       level: null,

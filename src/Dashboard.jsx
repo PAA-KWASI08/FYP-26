@@ -18,6 +18,7 @@ import { useStudentSession } from "./studentSession";
 import ConfirmationDialog from "./ConfirmationDialog";
 import StudentProfileMenu from "./StudentProfileMenu";
 import { getActiveAnnouncements } from "./announcementData";
+import { useAuth } from "./useAuth";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -28,9 +29,9 @@ export default function Dashboard() {
     lastSession,
     checkout,
     currentStudentId,
-    student,
     announcements,
   } = useStudentSession();
+  const { profile } = useAuth();
   const [now, setNow] = useState(() => Date.now());
   const [pendingCheckoutSession, setPendingCheckoutSession] = useState(null);
   const [checkoutError, setCheckoutError] = useState("");
@@ -114,7 +115,7 @@ export default function Dashboard() {
                 Welcome Back,
               </h2>
 
-              <h1 className="text-3xl sm:text-4xl font-bold mt-1 truncate" title={student.fullName}>{student.fullName}</h1>
+              <h1 className="text-3xl sm:text-4xl font-bold mt-1 truncate" title={profile.full_name}>{profile.full_name}</h1>
             </div>
 
             <StudentProfileMenu />

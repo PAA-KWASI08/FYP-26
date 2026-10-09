@@ -115,7 +115,7 @@ function SectionCard({ section, databaseSeatCounts, onRequestStatusChange, onEdi
         </div>
       </div>
 
-      <div className="mt-4 flex flex-col gap-2 border-t border-[#EEF0F5] pt-3">
+      <div data-tour-anchor="admin-section-list" className="mt-4 flex flex-col gap-2 border-t border-[#EEF0F5] pt-3">
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => onRequestStatusChange(section, nextStatus)} className="min-h-10 rounded-lg border border-[#DDE3F2] bg-white px-3 py-2 text-sm font-semibold text-[#140B63]">
             {section.status === "Open" ? "Close section" : "Open section"}
@@ -348,10 +348,11 @@ export default function AdminSections() {
             <h2 className="text-2xl font-bold text-[#140B63] sm:text-3xl">Library Sections</h2>
             <p className="text-sm text-gray-600">Manage library sections and monitor their current availability.</p>
           </div>
-          <button type="button" onClick={() => { setError(""); setEditingSection(null); }} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#140B63] px-4 py-2 text-sm font-semibold text-white">
+          <button data-tour-anchor="admin-section-create" type="button" onClick={() => { setError(""); setEditingSection(null); }} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#140B63] px-4 py-2 text-sm font-semibold text-white">
             <Plus className="h-4 w-4" aria-hidden="true" /> Add Section
           </button>
           <button
+            data-tour-anchor="admin-section-labels"
             type="button"
             onClick={() => void printSeatQrLabels()}
             disabled={loadingQrLabels || loading}
@@ -372,7 +373,7 @@ export default function AdminSections() {
       {adminSessionsError && <p role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">{adminSessionsError} Active-session checks are unavailable.</p>}
       {success && <p role="status" className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">{success}</p>}
 
-      <section aria-label="Section filters" className="flex flex-col gap-3 rounded-xl border border-[#DDE3F2] bg-white p-3 shadow-sm sm:flex-row sm:items-center">
+      <section data-tour-anchor="admin-section-filters" aria-label="Section filters" className="flex flex-col gap-3 rounded-xl border border-[#DDE3F2] bg-white p-3 shadow-sm sm:flex-row sm:items-center">
         <label className="relative min-w-0 flex-1">
           <span className="sr-only">Search sections</span>
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
@@ -413,7 +414,7 @@ export default function AdminSections() {
           ))}
         </section>
       ) : !loading && (
-        <section className="rounded-xl border border-dashed border-[#DDE3F2] bg-white px-4 py-10 text-center">
+        <section data-tour-anchor="admin-section-list" className="rounded-xl border border-dashed border-[#DDE3F2] bg-white px-4 py-10 text-center">
           <p className="font-semibold text-[#140B63]">{databaseSections.length ? "No sections match your search" : "No sections have been loaded"}</p>
           <p className="mt-1 text-sm text-gray-500">{databaseSections.length ? "Try another name or status filter." : "Sections will appear here when the Supabase query succeeds."}</p>
         </section>

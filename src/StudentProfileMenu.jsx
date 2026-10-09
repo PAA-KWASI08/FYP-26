@@ -49,6 +49,7 @@ export default function StudentProfileMenu({ compact = false }) {
     >
       <button
         type="button"
+        data-tour-anchor={compact ? undefined : "student-profile-menu"}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((isOpen) => !isOpen)}

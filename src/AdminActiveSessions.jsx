@@ -286,7 +286,7 @@ export default function AdminActiveSessions() {
       <p className="rounded-lg border border-[#E7EAF3] bg-white px-3 py-2.5 text-xs text-gray-600">
         Prolonged sessions are flagged for administrative review after {formatAdminDuration(PROLONGED_SESSION_REVIEW_MS)}. This is an attention threshold, not a study limit; sessions remain active until the student checks out.
       </p>
-      <p className="rounded-lg border border-[#E7EAF3] bg-white px-3 py-2.5 text-xs text-gray-600">
+      <p data-tour-anchor="admin-session-geofence" className="rounded-lg border border-[#E7EAF3] bg-white px-3 py-2.5 text-xs text-gray-600">
         {locationVerificationLoading
           ? "Loading location-verification settings…"
           : locationVerificationError
@@ -304,7 +304,7 @@ export default function AdminActiveSessions() {
       {error && <p role="alert" className="rounded-lg border border-[#F0D9CE] bg-[#FBF1EC] px-3 py-2 text-sm text-[#8A4934]">{error}</p>}
       {promptMessage && <p role="status" className="rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-2 text-sm text-[#1E3A8A]">{promptMessage}</p>}
 
-      <section aria-label="Active session filters" className="flex flex-col gap-3 rounded-xl border border-[#DDE3F2] bg-white p-3 shadow-sm sm:flex-row sm:items-center">
+      <section data-tour-anchor="admin-session-filters" aria-label="Active session filters" className="flex flex-col gap-3 rounded-xl border border-[#DDE3F2] bg-white p-3 shadow-sm sm:flex-row sm:items-center">
         <label className="min-w-0 flex-1">
           <span className="sr-only">Search active sessions</span>
           <input
@@ -328,18 +328,18 @@ export default function AdminActiveSessions() {
       </section>
 
       {adminSessionsLoading || adminSessionsError ? null : activeSessions.length === 0 ? (
-        <section className="rounded-xl border border-dashed border-[#DDE3F2] bg-white px-4 py-10 text-center">
+        <section data-tour-anchor="admin-session-list" className="rounded-xl border border-dashed border-[#DDE3F2] bg-white px-4 py-10 text-center">
           <UsersRound className="mx-auto h-8 w-8 text-[#7A80BD]" aria-hidden="true" />
           <h3 className="mt-2 font-semibold text-[#140B63]">No active study sessions</h3>
           <p className="mt-1 text-sm text-gray-500">Students who check in will appear here.</p>
         </section>
       ) : filteredSessions.length === 0 ? (
-        <section className="rounded-xl border border-dashed border-[#DDE3F2] bg-white px-4 py-10 text-center">
+        <section data-tour-anchor="admin-session-list" className="rounded-xl border border-dashed border-[#DDE3F2] bg-white px-4 py-10 text-center">
           <p className="font-semibold text-[#140B63]">No sessions match these filters</p>
           <p className="mt-1 text-sm text-gray-500">Try another search term or filter.</p>
         </section>
       ) : (
-        <section aria-label="Active session records" className="min-w-0 overflow-hidden rounded-xl border border-[#DDE3F2] bg-white shadow-sm">
+        <section data-tour-anchor="admin-session-list" aria-label="Active session records" className="min-w-0 overflow-hidden rounded-xl border border-[#DDE3F2] bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1060px] border-collapse text-left text-sm">
               <thead className="bg-[#FCFCFF]">

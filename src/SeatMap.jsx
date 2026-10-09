@@ -113,7 +113,7 @@ export default function SeatMap() {
                 Welcome Back,
               </h2>
 
-              <h1 className="text-2xl sm:text-3xl font-bold mt-1 truncate">
+              <h1 data-tour-anchor="student-section-list" className="text-2xl sm:text-3xl font-bold mt-1 truncate">
                 {isMapView ? selectedSection.name : "Sections"}
               </h1>
               <p className="text-gray-500 text-sm truncate">
@@ -188,7 +188,7 @@ export default function SeatMap() {
                           : "Seat status is loaded from the database. Viewing a seat does not claim it."}
                       </p>
 
-                      <label className="relative mb-4 block">
+                      <label data-tour-anchor="student-seat-search" className="relative mb-4 block">
                         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
                         <input
                           type="search"
@@ -323,6 +323,7 @@ export default function SeatMap() {
                     return (
                       <button
                         key={section.id}
+                        data-tour-section-route={`/seatmap/${section.id}`}
                         type="button"
                         disabled={!isOpen || !seatSection}
                         onClick={() => navigate(`/seatmap/${section.id}`)}

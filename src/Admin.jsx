@@ -93,7 +93,7 @@ export default function Admin() {
             {/* ADMIN ID */}
           <input
             type="text"
-            placeholder="Administrator ID (admin001)"
+            placeholder="Administrator ID"
             autoComplete="username"
             value={username}
             onChange={(event) => setUsername(event.target.value)}

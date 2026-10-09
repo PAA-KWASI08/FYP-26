@@ -18,6 +18,7 @@ import scan2seat from "./assets/images/scan2seat.png";
 import { useStudentSession } from "./studentSession";
 import { useAuth } from "./useAuth";
 import AvailabilityReminder from "./AvailabilityReminder";
+import SiteTour from "./SiteTour";
 
 const navigationItems = [
   { label: "Home", to: "/dashboard", icon: Home, key: "home" },
@@ -47,7 +48,7 @@ export default function StudentLayout() {
 function StudentLayoutFrame({ expanded, setExpanded }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { profile, signOut } = useAuth();
   const [contentScrollTop, setContentScrollTop] = useState(0);
   const [warningDismissed, setWarningDismissed] = useState(false);
   const contentRef = useRef(null);
@@ -178,6 +179,7 @@ function StudentLayoutFrame({ expanded, setExpanded }) {
           </nav>
 
           <div className={`mt-auto border-t border-white/15 pt-3 ${expanded ? "" : "w-full"}`}>
+            <SiteTour role="student" profileId={profile?.id ?? profile?.student_id} expanded={expanded} />
             <button
               type="button"
               onClick={logout}

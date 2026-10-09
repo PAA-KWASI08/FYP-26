@@ -150,9 +150,9 @@ function uniqueExtreme(counts, direction = "max") {
   return { names: winners, count: extreme };
 }
 
-function ChartCard({ title, description, children }) {
+function ChartCard({ title, description, children, tourAnchor }) {
   return (
-    <section className="min-w-0 rounded-xl border border-[#DDE3F2] bg-white p-4 shadow-sm sm:p-5">
+    <section data-tour-anchor={tourAnchor} className="min-w-0 rounded-xl border border-[#DDE3F2] bg-white p-4 shadow-sm sm:p-5">
       <div className="mb-4">
         <h3 className="font-bold text-[#140B63]">{title}</h3>
         {description && <p className="mt-1 text-xs text-gray-500">{description}</p>}
@@ -655,7 +655,7 @@ export default function AdminAnalytics() {
         </div>
       </header>
 
-      <section aria-labelledby="student-issue-reports-heading" className="rounded-xl border border-[#DDE3F2] bg-white p-4 shadow-sm sm:p-5">
+      <section data-tour-anchor="admin-analytics-issues" aria-labelledby="student-issue-reports-heading" className="rounded-xl border border-[#DDE3F2] bg-white p-4 shadow-sm sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 id="student-issue-reports-heading" className="text-lg font-bold text-[#140B63]">
@@ -717,7 +717,7 @@ export default function AdminAnalytics() {
         )}
       </section>
 
-      <section aria-label="Analytics date range" className="rounded-xl border border-[#DDE3F2] bg-white p-3 shadow-sm">
+      <section data-tour-anchor="admin-analytics-filters" aria-label="Analytics date range" className="rounded-xl border border-[#DDE3F2] bg-white p-3 shadow-sm">
         <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <label className="flex min-w-0 flex-col gap-1 text-xs font-semibold text-gray-600">
             <span>Global date range</span>
@@ -786,7 +786,7 @@ export default function AdminAnalytics() {
         </p>
       ) : null}
 
-      <section aria-labelledby="overview-heading">
+      <section data-tour-anchor="admin-analytics-overview" aria-labelledby="overview-heading">
         <h2 id="overview-heading" className="mb-2 text-lg font-bold text-[#140B63]">Overview</h2>
         <div aria-label="Historical usage overview" className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
         <StatCard label="Total Check-ins" value={noActivity ? "—" : records.length} note="Recorded sessions" icon={Activity} />
@@ -821,7 +821,7 @@ export default function AdminAnalytics() {
       </section>
 
       <section aria-labelledby="section-seat-analysis-heading" className="flex flex-col gap-3">
-      <h2 id="section-seat-analysis-heading" className="text-lg font-bold text-[#140B63]">Section &amp; Seat Analysis</h2>
+      <h2 data-tour-anchor="admin-analytics-analysis" id="section-seat-analysis-heading" className="text-lg font-bold text-[#140B63]">Section &amp; Seat Analysis</h2>
       <ChartCard title="Section Usage" description="Recorded check-ins, completed sessions, study time and current seat availability. Study-time totals include completed records only.">
         {noActivity ? <p className="text-sm text-gray-500">No recorded activity for this selection.</p> : (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -1029,7 +1029,7 @@ export default function AdminAnalytics() {
         )}
       </section>
 
-      <ChartCard title="Reports" description="Choose a reporting period for a summary based on the globally filtered shared session records.">
+      <ChartCard tourAnchor="admin-analytics-reports" title="Reports" description="Choose a reporting period for a summary based on the globally filtered shared session records.">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(180px,260px)_1fr] sm:items-end">
           <label className="flex flex-col gap-1 text-xs font-semibold text-gray-600">
             <span>Report period</span>

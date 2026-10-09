@@ -15,6 +15,7 @@ import libraryImage from "./assets/images/balme-library.jpg";
 import scan2seat from "./assets/images/scan2seat.png";
 import { useAuth } from "./useAuth";
 import { getAdminGeofenceAlerts } from "./lib/seatService";
+import SiteTour from "./SiteTour";
 
 const navigationItems = [
   { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard },
@@ -28,7 +29,7 @@ const navigationItems = [
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signOut } = useAuth();
+  const { profile, signOut } = useAuth();
   const [expanded, setExpanded] = useState(() => window.matchMedia("(min-width: 768px)").matches);
   const [geofenceAlertCount, setGeofenceAlertCount] = useState(0);
   const [geofenceAlertError, setGeofenceAlertError] = useState("");
@@ -142,6 +143,7 @@ export default function AdminLayout() {
           </nav>
 
           <div className={`mt-auto border-t border-white/15 pt-3 ${expanded ? "" : "w-full"}`}>
+            <SiteTour role="admin" profileId={profile?.id ?? profile?.student_id} expanded={expanded} />
             <button
               type="button"
               onClick={logout}
@@ -165,6 +167,7 @@ export default function AdminLayout() {
             <h1 className="text-lg font-bold text-[#140B63]">{navigationItems.find((item) => item.to === location.pathname)?.label ?? "Dashboard"}</h1>
           </div>
           <button
+            data-tour-anchor="admin-password-settings"
             type="button"
             onClick={() => navigate("/admin/change-password")}
             className="flex items-center gap-3 rounded-lg border border-[#DDE3F2] bg-[#FCFCFF] px-3 py-2 text-left transition hover:border-[#5B5FC7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B5FC7]"

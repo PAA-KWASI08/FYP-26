@@ -74,7 +74,7 @@ export default function HowItWorks() {
           Scan2Seat is designed for walk-in seat use. Viewing a seat does not reserve or claim it.
         </aside>
 
-        <ol className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <ol data-tour-anchor="student-how-it-works" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {steps.map(({ title, description, icon: Icon }, index) => (
             <li key={title} className="rounded-xl border bg-white p-4">
               <div className="flex items-start gap-3">

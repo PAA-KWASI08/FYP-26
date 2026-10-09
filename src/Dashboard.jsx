@@ -161,7 +161,7 @@ export default function Dashboard() {
           <p className="dashboard-stats-note text-xs text-gray-500">
             {catalogSyncError || "Live seat status from the database"}
           </p>
-          <div className="dashboard-stats mt-2 grid auto-rows-fr grid-cols-2 xl:grid-cols-4 gap-2 items-stretch">
+          <div data-tour-anchor="student-availability" className="dashboard-stats mt-2 grid auto-rows-fr grid-cols-2 xl:grid-cols-4 gap-2 items-stretch">
             <div className="dashboard-stat-card order-1 min-h-[76px] bg-white p-3 rounded-xl border flex flex-col justify-between">
               <div className="flex items-start gap-2 min-w-0">
                 <div className="w-8 h-8 rounded-lg bg-[#E7E6EC] flex items-center justify-center flex-shrink-0">
@@ -222,6 +222,7 @@ export default function Dashboard() {
             {/* CURRENT SESSION */}
             <section
             id="current-session"
+            data-tour-anchor="student-current-session"
             className={`dashboard-session-card h-full rounded-xl border p-3 shadow-sm transition-colors sm:p-4 ${
               session
                 ? "border-[#C9C8EC] bg-[#F8F9FF] shadow-[#140B63]/5"
@@ -361,7 +362,7 @@ export default function Dashboard() {
           </section>
 
           {/* QUICK ACTIONS */}
-          <section className="dashboard-quick-card h-full rounded-xl border border-[#DDE3F2] bg-[#FCFCFF] p-3 shadow-sm sm:p-4">
+          <section data-tour-anchor="student-quick-actions" className="dashboard-quick-card h-full rounded-xl border border-[#DDE3F2] bg-[#FCFCFF] p-3 shadow-sm sm:p-4">
             <h2 className="text-base xl:text-lg font-bold mb-2">Quick Actions</h2>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {quickActions.map(({ title, description, icon: Icon, iconTone, onClick, tooltip }) => (
@@ -393,7 +394,7 @@ export default function Dashboard() {
           </div>
 
           {/* ANNOUNCEMENTS */}
-          <div className="dashboard-announcements mt-2 rounded-xl border border-[#DDE3F2] bg-white p-3 shadow-sm">
+          <div data-tour-anchor="student-announcements" className="dashboard-announcements mt-2 rounded-xl border border-[#DDE3F2] bg-white p-3 shadow-sm">
             <div className="mb-2 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Bell className="h-4 w-4 text-[#4B4FA3]" aria-hidden="true" />

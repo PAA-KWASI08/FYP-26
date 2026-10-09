@@ -340,7 +340,7 @@ export default function CheckIn() {
     <div className="min-h-full w-full min-w-0 bg-[#F5F5F5] p-3 sm:p-4">
       <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col gap-4">
         <header className="border-b border-black/10 pb-3">
-          <h1 className="text-2xl font-bold text-[#140B63] sm:text-3xl">Check In to a Seat</h1>
+          <h1 data-tour-anchor="student-checkin-overview" className="text-2xl font-bold text-[#140B63] sm:text-3xl">Check In to a Seat</h1>
           <p className="mt-1 text-sm text-gray-600">
             Identify the seat you are currently using to start your study session.
           </p>
@@ -348,6 +348,7 @@ export default function CheckIn() {
 
         {!session && (
           <section
+            data-tour-anchor="student-location-check"
             className={`rounded-xl border p-4 ${
               !locationVerificationEnabled && !locationVerificationLoading && !locationVerificationError
                 ? "border-blue-200 bg-blue-50"
@@ -462,7 +463,7 @@ export default function CheckIn() {
             </div>
           </section>
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div data-tour-anchor="student-qr-checkin" className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {isMobile && (
               <section className="rounded-xl border bg-white p-4 sm:p-5">
                 <div className="flex items-center gap-2">
@@ -517,7 +518,7 @@ export default function CheckIn() {
               </section>
             )}
 
-            <section className="rounded-xl border bg-white p-4 sm:p-5">
+            <section data-tour-anchor="student-manual-checkin" className="rounded-xl border bg-white p-4 sm:p-5">
               <div className="flex items-center gap-2">
                 <Search className="h-5 w-5 text-[#140B63]" />
                 <h2 className="font-bold text-[#140B63]">Enter Seat ID Manually</h2>

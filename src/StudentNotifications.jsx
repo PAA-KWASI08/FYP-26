@@ -29,7 +29,7 @@ export default function StudentNotifications() {
         <StudentProfileMenu compact />
       </header>
 
-      <section aria-labelledby="student-announcements-title" className="mt-5">
+      <section data-tour-anchor="student-announcements-list" aria-labelledby="student-announcements-title" className="mt-5">
         <div className="mb-3 flex items-center gap-2">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF0FA] text-[#343A78]">
             <Bell className="h-4 w-4" aria-hidden="true" />

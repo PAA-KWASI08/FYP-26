@@ -55,7 +55,7 @@ export default function StudentProfile() {
           Your display name is a demo pseudonym stored in your account profile.
         </p>
 
-        <section className="rounded-xl border border-[#DDE3F2] bg-[#FCFCFF] p-4 shadow-sm sm:p-5">
+        <section data-tour-anchor="student-profile-details" className="rounded-xl border border-[#DDE3F2] bg-[#FCFCFF] p-4 shadow-sm sm:p-5">
           <h2 className="text-lg font-bold text-[#140B63]">Personal Information</h2>
           <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             <ProfileField label="Full Name" value={display(profile.full_name)} />
@@ -74,7 +74,7 @@ export default function StudentProfile() {
           </dl>
         </section>
 
-        <section className="rounded-xl border border-[#DDE3F2] bg-white p-4 shadow-sm sm:p-5">
+        <section data-tour-anchor="student-profile-security" className="rounded-xl border border-[#DDE3F2] bg-white p-4 shadow-sm sm:p-5">
           <h2 className="text-lg font-bold text-[#140B63]">Account Security</h2>
           <p className="mt-1 text-sm text-gray-600">Update your account password at any time.</p>
           <button

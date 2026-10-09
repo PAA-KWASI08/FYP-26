@@ -660,6 +660,7 @@ export default function AdminSeatManagement() {
             <p className="text-sm text-gray-600">View and manage individual library seats.</p>
           </div>
           <button
+            data-tour-anchor="admin-seat-create"
             type="button"
             disabled={!sections.length || Boolean(catalogSyncError)}
             onClick={() => {
@@ -671,6 +672,7 @@ export default function AdminSeatManagement() {
             <Plus className="h-4 w-4" aria-hidden="true" /> Add Seat
           </button>
           <button
+            data-tour-anchor="admin-seat-labels"
             type="button"
             onClick={() => void printSeatQrLabels(selectedSection?.id ?? null)}
             disabled={loadingQrLabels || !sections.length}
@@ -695,7 +697,7 @@ export default function AdminSeatManagement() {
       {adminSessionsError && <p role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">{adminSessionsError} Occupied-seat session details are unavailable.</p>}
       {success && <p role="status" className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">{success}</p>}
 
-      <section aria-label="Seat filters" className="flex flex-col gap-3 rounded-xl border border-[#DDE3F2] bg-white p-3 shadow-sm sm:flex-row sm:items-center">
+      <section data-tour-anchor="admin-seat-filters" aria-label="Seat filters" className="flex flex-col gap-3 rounded-xl border border-[#DDE3F2] bg-white p-3 shadow-sm sm:flex-row sm:items-center">
         <label className="relative min-w-0 flex-1">
           <span className="sr-only">Search seats</span>
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
@@ -766,9 +768,10 @@ export default function AdminSeatManagement() {
                 </div>
                 {section.seats.length ? (
                   <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9 2xl:grid-cols-12">
-                    {section.seats.map((seat) => (
+                    {section.seats.map((seat, index) => (
                     <button
                       key={seat.id}
+                      data-tour-anchor={index === 0 ? "admin-seat-list" : undefined}
                       type="button"
                       onClick={() => openSeatDetails(section.id, seat.id)}
                       disabled={qrIdentifiersLoading || Boolean(qrIdentifiersError)}
@@ -782,7 +785,7 @@ export default function AdminSeatManagement() {
                     ))}
                   </div>
                 ) : (
-                  <p className="rounded-lg border border-dashed border-[#DDE3F2] px-4 py-6 text-center text-sm text-gray-500">
+                  <p data-tour-anchor="admin-seat-list" className="rounded-lg border border-dashed border-[#DDE3F2] px-4 py-6 text-center text-sm text-gray-500">
                     No seats have been added to this section yet.
                   </p>
                 )}
@@ -791,7 +794,7 @@ export default function AdminSeatManagement() {
           })}
         </div>
       ) : (
-        <section className="rounded-xl border border-dashed border-[#DDE3F2] bg-white px-4 py-10 text-center">
+        <section data-tour-anchor="admin-seat-list" className="rounded-xl border border-dashed border-[#DDE3F2] bg-white px-4 py-10 text-center">
           <Armchair className="mx-auto h-7 w-7 text-[#7A80BD]" aria-hidden="true" />
           <p className="mt-2 font-semibold text-[#140B63]">No seats match your search</p>
           <p className="mt-1 text-sm text-gray-500">Try another seat code or section name.</p>

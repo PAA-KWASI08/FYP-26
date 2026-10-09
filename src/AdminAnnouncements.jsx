@@ -347,6 +347,7 @@ export default function AdminAnnouncements() {
           <p className="mt-1 text-sm text-gray-600">Review published announcements stored in Supabase.</p>
         </div>
         <button
+          data-tour-anchor="admin-announcement-create"
           type="button"
           onClick={openCreateForm}
           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#140B63] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#251b79] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B5FC7]"
@@ -389,7 +390,7 @@ export default function AdminAnnouncements() {
                   <span>Expires: {formatAnnouncementDate(announcement.expiryDate)}</span>
                 </div>
               </div>
-              <div className="flex shrink-0 flex-wrap gap-2">
+              <div data-tour-anchor="admin-announcement-list" className="flex shrink-0 flex-wrap gap-2">
                 <button type="button" onClick={() => openEditForm(announcement)} className="min-h-10 rounded-lg border border-[#DDE3F2] px-3 py-2 text-sm font-semibold text-[#140B63] hover:bg-[#F8F9FF]">
                   Edit
                 </button>
@@ -404,7 +405,7 @@ export default function AdminAnnouncements() {
             </div>
           </article>
         )) : announcementsLoading || announcementsError ? null : (
-          <div className="rounded-xl border border-dashed border-[#DDE3F2] bg-white px-4 py-10 text-center">
+          <div data-tour-anchor="admin-announcement-list" className="rounded-xl border border-dashed border-[#DDE3F2] bg-white px-4 py-10 text-center">
             <Bell className="mx-auto h-7 w-7 text-[#7A80BD]" aria-hidden="true" />
             <p className="mt-2 font-semibold text-[#140B63]">No published announcements</p>
             <p className="mt-1 text-sm text-gray-500">Create an announcement to share information with students.</p>

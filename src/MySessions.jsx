@@ -72,7 +72,7 @@ export default function MySessions() {
           </button>
         </header>
 
-        <section aria-labelledby="current-session-heading">
+        <section data-tour-anchor="student-sessions-current" aria-labelledby="current-session-heading">
           <div className="mb-2 flex items-center gap-2">
             <h2 id="current-session-heading" className="text-lg font-bold text-[#140B63]">Current Session</h2>
             {session && (
@@ -186,7 +186,7 @@ export default function MySessions() {
           </section>
         )}
 
-        <section aria-labelledby="session-history-heading">
+        <section data-tour-anchor="student-sessions-history" aria-labelledby="session-history-heading">
           <h2 id="session-history-heading" className="mb-2 text-lg font-bold text-[#140B63]">Session History</h2>
           {completedSessions.length ? (
             <ol className="space-y-2">

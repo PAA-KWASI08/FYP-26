@@ -89,7 +89,7 @@ export default function AdminDashboard() {
         {adminSessionsError && <p role="alert" className="text-xs text-amber-800">{adminSessionsError}</p>}
       </header>
 
-      <section aria-label="Library summary" className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
+      <section data-tour-anchor="admin-dashboard-summary" aria-label="Library summary" className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
         {summaryCards.map(({ key, label, icon: Icon, tone }) => (
           <article key={key} className="min-w-0 rounded-xl border border-[#DDE3F2] bg-white p-3 shadow-sm">
             <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${tone}`}>
@@ -128,7 +128,7 @@ export default function AdminDashboard() {
       </section>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(280px,1fr)]">
-        <section className="min-w-0 rounded-xl border border-[#DDE3F2] bg-[#FCFCFF] p-4 shadow-sm">
+        <section data-tour-anchor="admin-dashboard-sessions" className="min-w-0 rounded-xl border border-[#DDE3F2] bg-[#FCFCFF] p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-bold text-[#140B63]">Active Sessions</h2>
@@ -208,7 +208,7 @@ export default function AdminDashboard() {
         </section>
       </div>
 
-      <section aria-labelledby="admin-actions-heading">
+      <section data-tour-anchor="admin-dashboard-actions" aria-labelledby="admin-actions-heading">
         <h2 id="admin-actions-heading" className="mb-2 text-lg font-bold text-[#140B63]">Quick Management Actions</h2>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {managementActions.map(({ label, to }) => (

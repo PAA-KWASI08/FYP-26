@@ -99,6 +99,8 @@ export default function App() {
   };
 
   const handleLogin = async () => {
+    if (submitting || authLoading) return;
+
     setSubmitting(true);
     setLoginError("");
     const result = await signIn(username, password, "student");
@@ -146,7 +148,14 @@ export default function App() {
         </p>
 
         {/* FORM */}
-        <div className="mt-8 flex flex-col gap-4 w-full max-w-md">
+        <form
+          className="mt-8 flex flex-col gap-4 w-full max-w-md"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (showForgotPin) return;
+            void handleLogin();
+          }}
+        >
 
           {/* ROLE SELECTOR */}
           <div>
@@ -205,7 +214,7 @@ export default function App() {
             {/* PASSWORD */}
           <input
             type={showPin ? "text" : "password"}
-            placeholder="Password or prototype PIN"
+            placeholder="Password"
             autoComplete="current-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
@@ -224,10 +233,9 @@ export default function App() {
             </div>
 
             {/* LOGIN */}
-          <button
-            type="button"
-            onClick={handleLogin}
-            disabled={submitting || authLoading}
+            <button
+              type="submit"
+              disabled={submitting || authLoading}
             className="w-full h-[45px] bg-[#F47C5C]
             hover:bg-[#f26d4d] disabled:cursor-wait disabled:opacity-70 border border-white/40
             rounded text-white font-semibold transition"
@@ -293,7 +301,7 @@ export default function App() {
             <p className="text-sm text-center text-white" role="alert">{loginError}</p>
           )}
 
-        </div>
+        </form>
       </div>
 
       {resetNotification && (

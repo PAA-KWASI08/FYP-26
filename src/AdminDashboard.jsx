@@ -32,13 +32,13 @@ const managementActions = [
 ];
 
 function SectionCard({ section, databaseSeats }) {
-  const databaseCounts = getSeatCountsForSection(databaseSeats, section.id);
+  const databaseCounts = getSeatCountsForSection(databaseSeats, section.id, section.status);
 
   return (
     <article className="rounded-xl border border-[#DDE3F2] bg-white p-3 shadow-sm">
       <div className="flex items-start justify-between gap-2">
         <h3 className="min-w-0 text-sm font-bold text-[#140B63]">{section.name}</h3>
-        <AdminSectionStatus status={section.status} />
+        <AdminSectionStatus status={section.status} isActive={section.is_active !== false} />
       </div>
       <p className="mt-1 text-xs text-gray-500">
         {databaseCounts ? `${databaseCounts.total} total seats` : "Database seat count unavailable"}

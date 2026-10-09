@@ -20,9 +20,20 @@ export default function SeatMap() {
   const [supabaseSections, setSupabaseSections] = useState(null);
   const [sectionsLoading, setSectionsLoading] = useState(true);
   const [sectionsError, setSectionsError] = useState(null);
-  const selectedSection = currentSections.find((section) => section.id === sectionId);
-  const orderedSections = supabaseSections
-    ? [...supabaseSections].sort((left, right) => {
+  const selectedSectionRecord = currentSections.find((section) => (
+    section.id === sectionId && section.is_active !== false && !section.deleted_at
+  ));
+  const selectedSection = selectedSectionRecord
+    ? {
+      ...selectedSectionRecord,
+      seats: selectedSectionRecord.seats.filter((seat) => seat.is_active !== false && !seat.deleted_at),
+    }
+    : undefined;
+  const visibleSections = supabaseSections?.filter((section) => (
+    section.is_active !== false && !section.deleted_at
+  ));
+  const orderedSections = visibleSections
+    ? [...visibleSections].sort((left, right) => {
       const leftIsOpen = left.status?.toLowerCase() === "open";
       const rightIsOpen = right.status?.toLowerCase() === "open";
       if (leftIsOpen !== rightIsOpen) return leftIsOpen ? -1 : 1;
@@ -31,6 +42,28 @@ export default function SeatMap() {
     : supabaseSections;
 
   const isMapView = Boolean(selectedSection);
+  const totalCatalogSections = supabaseSections?.filter((section) => !section.deleted_at).length ?? 0;
+  const catalogSectionIds = new Set(
+    supabaseSections?.filter((section) => !section.deleted_at).map((section) => section.id) ?? [],
+  );
+  const totalCatalogSeats = databaseSeats === null
+    ? null
+    : databaseSeats.filter((seat) => (
+      catalogSectionIds.has(seat.section_id) && !seat.deleted_at
+    )).length;
+  const selectedSectionCounts = selectedSection
+    ? getSeatCountsForSection(databaseSeats, selectedSection.id, selectedSection.status, {
+      includeInactiveInTotal: true,
+    })
+    : null;
+  const selectedSectionAvailability = selectedSection
+    ? getSectionAvailability(selectedSection)
+    : null;
+  const hasTemporarilyDeactivatedResources = supabaseSections?.some((section) => (
+    !section.deleted_at && section.is_active === false
+  )) || databaseSeats?.some((seat) => (
+    catalogSectionIds.has(seat.section_id) && !seat.deleted_at && seat.is_active === false
+  ));
   useEffect(() => {
     if (sectionId) return undefined;
 
@@ -154,7 +187,10 @@ export default function SeatMap() {
                       <div>
                         <h2 className="text-lg font-bold">{selectedSection.name} Seat Availability</h2>
                         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                          {Object.entries(getSectionAvailability(selectedSection)).map(([label, count]) => (
+                          {Object.entries({
+                            ...selectedSectionAvailability,
+                            total: selectedSectionCounts?.total ?? selectedSectionAvailability.total,
+                          }).map(([label, count]) => (
                             <p key={label} className={label === "available" ? "font-semibold text-[#140B63]" : "text-gray-600"}>
                               {count} {label === "total" ? "seats" : label}
                             </p>
@@ -176,7 +212,7 @@ export default function SeatMap() {
                         <span className="text-sm">Occupied</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded bg-[#ECE7CF] flex-shrink-0" aria-hidden="true" />
+                        <div className="w-5 h-5 rounded bg-[#FEE2E2] flex-shrink-0" aria-hidden="true" />
                         <span className="text-sm">Unavailable</span>
                       </div>
                     </div>
@@ -222,12 +258,12 @@ export default function SeatMap() {
                               </p>
                               <div className="flex flex-wrap gap-2">
                                 {matchingSeats.map((seat) => {
-                                  const status = getSeatStatus(seat);
+                                  const status = getSeatStatus(seat, selectedSection);
                                   const statusStyle = status === "Available"
                                     ? "bg-[#DDE4DE] text-[#233b28]"
                                     : status === "Occupied"
                                       ? "bg-[#F1DADA] text-[#713b3b]"
-                                      : "bg-[#ECE7CF] text-[#554d2b]";
+                                      : "bg-[#FEE2E2] text-[#991B1B]";
 
                                   return (
                                     <button
@@ -255,12 +291,12 @@ export default function SeatMap() {
 
                       <div className="flex flex-wrap justify-center gap-1 sm:gap-2 sm:gap-2.5">
                         {selectedSection.seats.map((seat) => {
-                          const status = getSeatStatus(seat);
+                          const status = getSeatStatus(seat, selectedSection);
                           const bgColor = status === "Available"
                             ? "bg-[#DDE4DE]"
                             : status === "Occupied"
                               ? "bg-[#F1DADA]"
-                              : "bg-[#ECE7CF]";
+                              : "bg-[#FEE2E2] text-[#991B1B]";
 
                           return (
                             <div
@@ -313,10 +349,28 @@ export default function SeatMap() {
                   </p>
                 )}
                 {!sectionsError && supabaseSections?.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="rounded-xl border border-[#DDE3F2] bg-white p-3 text-sm font-semibold text-[#140B63]" aria-label="Library catalog totals">
+                      {totalCatalogSections} {totalCatalogSections === 1 ? "section" : "sections"} · {totalCatalogSeats ?? "—"} {totalCatalogSeats === 1 ? "seat" : "seats"} total
+                    </div>
+                    {hasTemporarilyDeactivatedResources && (
+                      <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                        Some seats or sections are temporarily deactivated and hidden from this view. Totals still include them.
+                      </p>
+                    )}
+                    {!orderedSections.length ? (
+                      <p className="rounded-lg border border-[#DDE3F2] bg-white p-3 text-sm text-gray-600">
+                        No active sections are currently available.
+                      </p>
+                    ) : (
                   <div className="section-card-grid grid grid-cols-1 gap-3 lg:grid-cols-2">
                     {orderedSections.map((section) => {
-                    const seatSection = currentSections.find((item) => item.id === section.id);
-                    const databaseCounts = getSeatCountsForSection(databaseSeats, section.id);
+                    const seatSection = currentSections.find((item) => (
+                      item.id === section.id && item.is_active !== false && !item.deleted_at
+                    ));
+                    const databaseCounts = getSeatCountsForSection(databaseSeats, section.id, section.status, {
+                      includeInactiveInTotal: true,
+                    });
                     const isOpen = section.status?.toLowerCase() === "open";
                     const displayStatus = isOpen ? "Open" : "Closed";
 
@@ -356,7 +410,7 @@ export default function SeatMap() {
                             <p className="text-xs font-semibold text-gray-600 sm:text-sm">Occupied</p>
                             <p className="mt-1 text-2xl font-bold leading-none text-[#713B3B] sm:text-3xl">{databaseCounts?.occupied ?? "—"}</p>
                           </div>
-                          <div className="rounded-lg border border-[#ECE7CF] bg-[#FFFEF8] p-3">
+                          <div className="rounded-lg border border-red-200 bg-red-50 p-3">
                             <p className="text-xs font-semibold text-gray-600 sm:text-sm">Unavailable</p>
                             <p className="mt-1 text-2xl font-bold leading-none text-[#554D2B] sm:text-3xl">{databaseCounts?.unavailable ?? "—"}</p>
                           </div>
@@ -371,6 +425,8 @@ export default function SeatMap() {
                       </button>
                     );
                   })}
+                  </div>
+                    )}
                   </div>
                 )}
               </div>

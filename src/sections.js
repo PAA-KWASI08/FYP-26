@@ -1,8 +1,17 @@
-export function getSeatStatus(seat) {
+export function getSeatStatus(seat, section) {
+  if (section?.status?.toLocaleLowerCase() === "closed") return "Unavailable";
   return seat.status;
 }
 
 export function getSectionAvailability(section) {
+  if (section.status?.toLocaleLowerCase() === "closed") {
+    return {
+      total: section.seats.length,
+      available: 0,
+      occupied: 0,
+      unavailable: section.seats.length,
+    };
+  }
   return section.seats.reduce(
     (counts, seat) => {
       counts.total += 1;

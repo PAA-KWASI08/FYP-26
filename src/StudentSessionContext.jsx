@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "./useAuth";
 import { mockStudent } from "./studentData";
 import { StudentSessionContext } from "./studentSession";
-import { getSections } from "./lib/sectionService";
+import { getSectionSeatPrefix, getSections } from "./lib/sectionService";
 import {
   findSeatByQrIdentifier,
   getAdminSeatSessions,
@@ -86,14 +86,11 @@ export function StudentSessionProvider({ children }) {
     const section = {
       id: record.id,
       name: record.name,
-      prefix: record.name
-        .split(/[\s'-]+/)
-        .filter(Boolean)
-        .map((word) => word[0])
-        .join("")
-        .toLocaleUpperCase(),
+      prefix: getSectionSeatPrefix(record),
       status: record.status?.toLocaleLowerCase() === "open" ? "Open" : "Closed",
       description: record.description ?? "",
+      is_active: record.is_active !== false,
+      deleted_at: record.deleted_at ?? null,
       seats: [],
     };
     setSections((currentSections) => {
@@ -132,6 +129,8 @@ export function StudentSessionProvider({ children }) {
             ? "Unavailable"
             : "Available",
         unavailableReason: record.unavailable_reason ?? null,
+        is_active: record.is_active !== false,
+        deleted_at: record.deleted_at ?? null,
       };
 
       return {
@@ -167,6 +166,8 @@ export function StudentSessionProvider({ children }) {
               ? "Unavailable"
               : "Available",
           unavailableReason: record.unavailable_reason ?? null,
+          is_active: record.is_active !== false,
+          deleted_at: record.deleted_at ?? null,
         })),
     })));
     setCatalogSyncError("");
@@ -263,14 +264,11 @@ export function StudentSessionProvider({ children }) {
                   ...existing,
                   id: record.id,
                   name: record.name,
-                  prefix: existing?.prefix ?? record.name
-                    .split(/[\s'-]+/)
-                    .filter(Boolean)
-                    .map((word) => word[0])
-                    .join("")
-                    .toLocaleUpperCase(),
+                  prefix: getSectionSeatPrefix(record),
                   status: record.status?.toLocaleLowerCase() === "open" ? "Open" : "Closed",
                   description: record.description ?? "",
+                  is_active: record.is_active !== false,
+                  deleted_at: record.deleted_at ?? null,
                   seats: existing?.seats ?? [],
                 };
                 if (existingIndex >= 0) nextSections[existingIndex] = section;
@@ -289,14 +287,11 @@ export function StudentSessionProvider({ children }) {
                   ...existing,
                   id: record.id,
                   name: record.name,
-                  prefix: existing?.prefix ?? record.name
-                    .split(/[\s'-]+/)
-                    .filter(Boolean)
-                    .map((word) => word[0])
-                    .join("")
-                    .toLocaleUpperCase(),
+                  prefix: getSectionSeatPrefix(record),
                   status: record.status?.toLocaleLowerCase() === "open" ? "Open" : "Closed",
                   description: record.description ?? "",
+                  is_active: record.is_active !== false,
+                  deleted_at: record.deleted_at ?? null,
                 };
               })
               : currentSections;
@@ -315,6 +310,8 @@ export function StudentSessionProvider({ children }) {
                       ? "Unavailable"
                       : "Available",
                   unavailableReason: record.unavailable_reason ?? null,
+                  is_active: record.is_active !== false,
+                  deleted_at: record.deleted_at ?? null,
                 })),
             }));
           });

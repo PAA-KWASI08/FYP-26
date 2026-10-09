@@ -4,6 +4,19 @@ function normalizeSectionStatus(status) {
   return status === "Open" ? "open" : status === "Closed" ? "closed" : status;
 }
 
+export function getSectionSeatPrefix(section) {
+  if (section?.id?.toLocaleLowerCase() === "iac" || section?.name?.trim().toLocaleUpperCase() === "IAC") {
+    return "IAC";
+  }
+  const words = (section?.name ?? "")
+    .split(/[\s'-]+/)
+    .filter(Boolean);
+  if (words.length > 1) {
+    return words.map((word) => word[0]).join("").toLocaleUpperCase();
+  }
+  return (words[0] ?? "").slice(0, 2).toLocaleUpperCase();
+}
+
 export function createSectionId(name) {
   return name
     .normalize("NFKD")
@@ -24,7 +37,7 @@ export async function getSections() {
 
   const { data, error } = await supabase
     .from("sections")
-    .select("id, name, status, description, created_at")
+    .select("id, name, status, description, created_at, is_active, deleted_at")
     .order("name", { ascending: true });
 
   return { data, error };
@@ -69,11 +82,14 @@ export async function updateSection(sectionId, updates) {
   return { data, error };
 }
 
-export async function deactivateSection(sectionId) {
+export async function updateSectionLifecycle(sectionId, action) {
   if (!supabase) return { data: null, error: new Error("Supabase is not configured.") };
+  if (!["deactivate", "activate", "delete"].includes(action)) {
+    return { data: null, error: new Error("Choose a valid section action.") };
+  }
 
   const { data, error } = await supabase.rpc("admin_manage_sections", {
-    p_action: "deactivate",
+    p_action: action,
     p_section_id: sectionId,
   }).maybeSingle();
   return { data, error };

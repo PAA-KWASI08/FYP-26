@@ -9,7 +9,16 @@ const statusStyles = {
   },
 };
 
-export default function AdminSectionStatus({ status }) {
+export default function AdminSectionStatus({ status, isActive = true }) {
+  if (!isActive) {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-yellow-300 bg-yellow-100 px-2.5 py-1 text-xs font-semibold text-yellow-900">
+        <span className="h-1.5 w-1.5 rounded-full bg-yellow-600" aria-hidden="true" />
+        Deactivated
+      </span>
+    );
+  }
+
   const styles = statusStyles[status];
 
   return (

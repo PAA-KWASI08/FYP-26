@@ -344,7 +344,6 @@ export default function AdminAnnouncements() {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-[#140B63] sm:text-3xl">Notifications &amp; Announcements</h2>
-          <p className="mt-1 text-sm text-gray-600">Review published announcements stored in Supabase.</p>
         </div>
         <button
           data-tour-anchor="admin-announcement-create"
@@ -362,9 +361,6 @@ export default function AdminAnnouncements() {
           {error}
         </p>
       )}
-      <p role="note" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-        Administrator actions require an authenticated, active administrator account. Do not share your account password.
-      </p>
       {saving && <p role="status" className="text-sm text-gray-500">Saving announcement…</p>}
       {announcementsLoading && <p role="status" className="text-sm text-gray-500">Loading announcements…</p>}
       {announcementsError && (

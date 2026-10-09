@@ -1,14 +1,24 @@
 import { supabase } from "./supabase";
 
-const selectSeatFields = "id, section_id, seat_code, status, unavailable_reason";
+const selectSeatFields = "id, section_id, seat_code, status, unavailable_reason, is_active, deleted_at";
 
-export function getSeatCountsForSection(seats, sectionId) {
+export function getSeatCountsForSection(
+  seats,
+  sectionId,
+  sectionStatus = "open",
+  { includeInactiveInTotal = false } = {},
+) {
   if (!Array.isArray(seats)) return null;
 
   return seats.reduce((counts, seat) => {
-    if (seat.section_id !== sectionId) return counts;
+    if (seat.section_id !== sectionId || seat.deleted_at) return counts;
+    if (seat.is_active === false) {
+      if (includeInactiveInTotal) counts.total += 1;
+      return counts;
+    }
     counts.total += 1;
-    if (seat.status === "available") counts.available += 1;
+    if (sectionStatus?.toLocaleLowerCase() === "closed") counts.unavailable += 1;
+    else if (seat.status === "available") counts.available += 1;
     else if (seat.status === "occupied") counts.occupied += 1;
     else if (seat.status === "unavailable") counts.unavailable += 1;
     return counts;
@@ -49,7 +59,7 @@ export async function getSeatCounts() {
 
   const { data, error } = await supabase
     .from("seats")
-    .select("section_id, status");
+    .select("section_id, status, is_active, deleted_at");
   return { data, error };
 }
 
@@ -142,11 +152,14 @@ export async function updateSeat(seatCode, updates) {
   return { data, error };
 }
 
-export async function deactivateSeat(seatCode) {
+export async function updateSeatLifecycle(seatCode, action) {
   if (!supabase) return { data: null, error: new Error("Supabase is not configured.") };
+  if (!["deactivate", "activate", "delete"].includes(action)) {
+    return { data: null, error: new Error("Choose a valid seat action.") };
+  }
 
   const { data, error } = await supabase.rpc("admin_manage_seats", {
-    p_action: "deactivate",
+    p_action: action,
     p_previous_seat_code: seatCode,
   }).maybeSingle();
   return { data, error };

@@ -4,13 +4,14 @@ import { Link } from "react-router-dom";
 import ConfirmationDialog from "./ConfirmationDialog";
 import AdminSectionStatus from "./AdminSectionStatus";
 import { useStudentSession } from "./studentSession";
-import { createSection, deactivateSection, getSections, updateSection } from "./lib/sectionService";
+import { createSection, getSections, updateSection, updateSectionLifecycle } from "./lib/sectionService";
 import {
   getAdminSeatQrLabels,
   getSeatCountsForSection,
   getSeatQrLabelErrorMessage,
 } from "./lib/seatService";
 import SeatQrPrintDialog from "./SeatQrPrintDialog";
+import ResourceLifecycleDialog from "./ResourceLifecycleDialog";
 
 const inputClassName = "min-h-11 w-full rounded-lg border border-[#DDE3F2] bg-white px-3 py-2 text-sm text-[#140B63] outline-none focus:border-[#8B8FD1] focus:ring-2 focus:ring-[#E7E8F8]";
 
@@ -82,7 +83,7 @@ function SectionFormDialog({ section, busy, error, onCancel, onSubmit }) {
 }
 
 function SectionCard({ section, databaseSeatCounts, onRequestStatusChange, onEdit, onRemove, onPrintLabels }) {
-  const databaseCounts = getSeatCountsForSection(databaseSeatCounts, section.id);
+  const databaseCounts = getSeatCountsForSection(databaseSeatCounts, section.id, section.status);
   const nextStatus = section.status === "Open" ? "Closed" : "Open";
 
   return (
@@ -92,7 +93,7 @@ function SectionCard({ section, databaseSeatCounts, onRequestStatusChange, onEdi
           <h2 className="break-words text-lg font-bold text-[#140B63]">{section.name}</h2>
           <p className="mt-1 text-xs text-gray-500">Section ID: <span className="font-medium text-gray-700">{section.id}</span></p>
         </div>
-        <AdminSectionStatus status={section.status} />
+        <AdminSectionStatus status={section.status} isActive={section.is_active !== false} />
       </div>
 
       <p className="mt-3 text-xs text-gray-600">
@@ -117,14 +118,18 @@ function SectionCard({ section, databaseSeatCounts, onRequestStatusChange, onEdi
 
       <div data-tour-anchor="admin-section-list" className="mt-4 flex flex-col gap-2 border-t border-[#EEF0F5] pt-3">
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => onRequestStatusChange(section, nextStatus)} className="min-h-10 rounded-lg border border-[#DDE3F2] bg-white px-3 py-2 text-sm font-semibold text-[#140B63]">
-            {section.status === "Open" ? "Close section" : "Open section"}
-          </button>
-          <button type="button" onClick={() => onEdit(section)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#DDE3F2] bg-white px-3 py-2 text-sm font-semibold text-[#140B63]">
-            <Pencil className="h-4 w-4" aria-hidden="true" /> Edit
-          </button>
+          {section.is_active !== false && (
+            <>
+              <button type="button" onClick={() => onRequestStatusChange(section, nextStatus)} className="min-h-10 rounded-lg border border-[#DDE3F2] bg-white px-3 py-2 text-sm font-semibold text-[#140B63]">
+                {section.status === "Open" ? "Close section" : "Open section"}
+              </button>
+              <button type="button" onClick={() => onEdit(section)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#DDE3F2] bg-white px-3 py-2 text-sm font-semibold text-[#140B63]">
+                <Pencil className="h-4 w-4" aria-hidden="true" /> Edit
+              </button>
+            </>
+          )}
           <button type="button" onClick={() => onRemove(section)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#F0D9CE] bg-white px-3 py-2 text-sm font-semibold text-[#8A4934]">
-            <Archive className="h-4 w-4" aria-hidden="true" /> Deactivate
+            <Archive className="h-4 w-4" aria-hidden="true" /> {section.is_active === false ? "Activate / Delete" : "Deactivate / Delete"}
           </button>
         </div>
         <Link
@@ -135,14 +140,16 @@ function SectionCard({ section, databaseSeatCounts, onRequestStatusChange, onEdi
           Manage seats
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>
-        <button
-          type="button"
-          onClick={() => onPrintLabels(section)}
-          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-[#4B4FA3] transition hover:bg-[#F8F9FF]"
-        >
-          <Printer className="h-4 w-4" aria-hidden="true" />
-          Print section QR labels
-        </button>
+        {section.is_active !== false && (
+          <button
+            type="button"
+            onClick={() => onPrintLabels(section)}
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-[#4B4FA3] transition hover:bg-[#F8F9FF]"
+          >
+            <Printer className="h-4 w-4" aria-hidden="true" />
+            Print section QR labels
+          </button>
+        )}
       </div>
     </article>
   );
@@ -214,7 +221,11 @@ export default function AdminSections() {
     const normalizedQuery = query.trim().toLocaleLowerCase();
     return sections
       .filter((section) => (
-        (statusFilter === "All" || section.status === statusFilter)
+        !section.deleted_at
+        && (statusFilter === "All"
+          || (statusFilter === "Deactivated"
+            ? section.is_active === false
+            : section.is_active !== false && section.status === statusFilter))
         && (
           !normalizedQuery
           || section.name.toLocaleLowerCase().includes(normalizedQuery)
@@ -238,18 +249,21 @@ export default function AdminSections() {
         setError(getSeatQrLabelErrorMessage(result.error));
         return;
       }
-      if (!result.data?.length) {
+      const labels = (result.data ?? []).filter((item) => (
+        item.is_active !== false && item.section_is_active !== false
+      ));
+      if (!labels.length) {
         setError("There are no seats with QR labels to print.");
         return;
       }
-      const labels = result.data.map((item) => ({
+      const printableLabels = labels.map((item) => ({
         id: item.id,
         sectionId: item.section_id,
         sectionName: item.section_name,
         seatCode: item.seat_code,
         qrIdentifier: item.qr_identifier,
       }));
-      setQrLabels(labels);
+      setQrLabels(printableLabels);
       setQrLabelsInitialSectionId(sectionId);
     } catch (loadError) {
       console.error("Unable to request seat QR labels:", loadError);
@@ -312,28 +326,36 @@ export default function AdminSections() {
     setSuccess(`Section ${pendingChange.status.toLocaleLowerCase()}.`);
   };
 
-  const confirmRemoval = async () => {
-    if (adminSessionsLoading || adminSessionsError) {
+  const confirmRemoval = async (action) => {
+    if (action !== "activate" && (adminSessionsLoading || adminSessionsError)) {
       setError("Cannot verify recorded active sessions right now. Refresh and try again.");
       setPendingRemoval(null);
       return;
     }
-    if (adminSessions.some((item) => item.sessionStatus === "active" && item.sectionId === pendingRemoval.id)) {
-      setError("This section has an active seat session and cannot be deactivated.");
+    if (action !== "activate" && adminSessions.some((item) => item.sessionStatus === "active" && item.sectionId === pendingRemoval.id)) {
+      setError("This section has an active seat session and cannot be changed.");
       setPendingRemoval(null);
       return;
     }
     setSaving(true);
-    const result = await deactivateSection(pendingRemoval.id);
+    const result = await updateSectionLifecycle(pendingRemoval.id, action);
     setSaving(false);
     setPendingRemoval(null);
     if (result.error) {
       setError(result.error.message);
       return;
     }
+    if (!result.data) {
+      setError(`No database record was returned while attempting to ${action} this section.`);
+      return;
+    }
     syncSectionRecord(result.data);
     setDatabaseSections((current) => current.map((item) => item.id === result.data.id ? result.data : item));
-    setSuccess("Section safely deactivated (closed). No seats or session history were deleted.");
+    setSuccess(action === "delete"
+      ? "Section archived from the catalog. Historical session records remain linked."
+      : action === "activate"
+        ? "Section activated. Its open/closed status is unchanged."
+        : "Section deactivated. Students can no longer see it; you can activate it later.");
   };
 
   const cancelStatusChange = () => setPendingChange(null);
@@ -395,6 +417,7 @@ export default function AdminSections() {
             <option>All</option>
             <option>Open</option>
             <option>Closed</option>
+            <option>Deactivated</option>
           </select>
         </label>
       </section>
@@ -446,12 +469,12 @@ export default function AdminSections() {
         />
       )}
       {pendingRemoval && (
-        <ConfirmationDialog
-          title={`Deactivate ${pendingRemoval.name}?`}
-          message="This will close the section so students cannot check in. Seats and historical session records are never deleted. Sections with active sessions cannot be deactivated."
-          details={[{ label: "Section ID", value: pendingRemoval.id }]}
-          confirmLabel={saving ? "Checking…" : "Confirm Deactivation"}
-          onConfirm={confirmRemoval}
+        <ResourceLifecycleDialog
+          resourceType="Section"
+          name={pendingRemoval.name}
+          isActive={pendingRemoval.is_active !== false}
+          busy={saving}
+          onConfirm={(action) => void confirmRemoval(action)}
           onCancel={() => setPendingRemoval(null)}
         />
       )}

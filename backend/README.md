@@ -32,6 +32,8 @@ Location verification is temporarily disabled for check-in testing by `202610082
 
 Seat availability and section information are read from the current database catalog. No fixed seat totals or sample seat-status fixtures are used for the live dashboard and seat-management views. Admin-only unavailable changes use the Auth-protected administrator seat-management RPC.
 
+Apply `20261009225500_seat_section_lifecycle.sql` to enable editable seat codes, automatically generated QR identifiers, reversible seat/section deactivation, and archived deletion. Deactivation hides a resource from students but leaves it available to administrators for reactivation. Deletion archives the row instead of physically removing it, preserving foreign-key links to historical sessions and announcements. Seats created in an existing section receive their QR identifier in the same database operation; administrators can view or print the QR label from Seat Management.
+
 ### First administrator creation
 
 Apply the `20261008184000_secure_admin_authentication.sql` migration and deploy the updated login function before provisioning the first administrator. From the application root, set `SUPABASE_URL` in a secure interactive terminal and run `node backend/scripts/provision-admin-account.mjs`. If `SUPABASE_SERVICE_ROLE_KEY` is not set, the script prompts for it without echoing. It creates `admin001` with a random temporary password, an active administrator profile, and `must_change_password=true`; the temporary password is shown once in the terminal. Store it directly in a password manager and do not add it to this README, source, SQL, screenshots, or shared logs. The script does not reset an existing account.

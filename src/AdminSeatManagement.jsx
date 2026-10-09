@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { QRCodeSVG } from "qrcode.react";
 import { Archive, Armchair, Pencil, Plus, Printer, QrCode, Search } from "lucide-react";
 import AdminSectionStatus from "./AdminSectionStatus";
 import ConfirmationDialog from "./ConfirmationDialog";
@@ -7,14 +8,16 @@ import { formatAdminDuration, formatAdminTime } from "./adminData";
 import { useStudentSession } from "./studentSession";
 import {
   createSeat,
-  deactivateSeat,
   getAdminSeatQrLabels,
   getSeatCountsForSection,
   getSeatQrLabelErrorMessage,
   regenerateSeatQr,
   updateSeat,
+  updateSeatLifecycle,
 } from "./lib/seatService";
+import { getSectionSeatPrefix } from "./lib/sectionService";
 import SeatQrPrintDialog from "./SeatQrPrintDialog";
+import ResourceLifecycleDialog from "./ResourceLifecycleDialog";
 
 const seatStatusStyles = {
   Available: {
@@ -44,12 +47,7 @@ const unavailableReasons = [
 const seatInputClassName = "min-h-11 w-full rounded-lg border border-[#DDE3F2] bg-white px-3 py-2 text-sm text-[#140B63] outline-none focus:border-[#8B8FD1] focus:ring-2 focus:ring-[#E7E8F8]";
 
 function createNextSeatCode(section) {
-  const prefix = section.prefix || section.name
-    .split(/[\s'-]+/)
-    .filter(Boolean)
-    .map((word) => word[0])
-    .join("")
-    .toLocaleUpperCase();
+  const prefix = getSectionSeatPrefix(section);
   const largest = section.seats.reduce((maximum, seat) => {
     const match = seat.seatCode.match(new RegExp(`^${prefix}-(\\d+)$`, "i"));
     return match ? Math.max(maximum, Number(match[1])) : maximum;
@@ -60,7 +58,12 @@ function createNextSeatCode(section) {
 function SeatFormDialog({ sections, seat, initialSectionId, busy, error, onCancel, onSubmit }) {
   const [sectionId, setSectionId] = useState(seat?.sectionId ?? initialSectionId ?? sections[0]?.id ?? "");
   const selectedSection = sections.find((item) => item.id === sectionId);
-  const [seatCode, setSeatCode] = useState(seat?.seatCode ?? (selectedSection ? createNextSeatCode(selectedSection) : ""));
+  const [seatCode, setSeatCode] = useState(seat?.seatCode ?? "");
+  const [seatNumber, setSeatNumber] = useState(() => (
+    seat?.seatCode.split("-").at(-1)
+    ?? (selectedSection ? createNextSeatCode(selectedSection).split("-").at(-1) : "")
+  ));
+  const seatPrefix = selectedSection ? getSectionSeatPrefix(selectedSection) : "";
   const [status, setStatus] = useState(seat?.status ?? "Available");
   const [unavailableReason, setUnavailableReason] = useState(seat?.unavailableReason ?? "");
 
@@ -74,7 +77,7 @@ function SeatFormDialog({ sections, seat, initialSectionId, busy, error, onCance
           event.preventDefault();
           onSubmit({
             sectionId,
-            seatCode,
+            seatCode: seat ? seatCode : `${seatPrefix}-${seatNumber}`,
             qrIdentifier: seat?.qrIdentifier,
             status,
             unavailableReason,
@@ -94,8 +97,7 @@ function SeatFormDialog({ sections, seat, initialSectionId, busy, error, onCance
                 const nextSection = sections.find((item) => item.id === event.target.value);
                 setSectionId(event.target.value);
                 if (nextSection) {
-                  const nextCode = createNextSeatCode(nextSection);
-                  setSeatCode(nextCode);
+                  setSeatNumber(createNextSeatCode(nextSection).split("-").at(-1));
                 }
               }}
               className={`mt-1 ${seatInputClassName}`}
@@ -104,13 +106,34 @@ function SeatFormDialog({ sections, seat, initialSectionId, busy, error, onCance
             </select>
           </label>
           <label className="block text-sm font-semibold text-gray-700">
-            Seat Code
-            <input required maxLength={40} value={seatCode} onChange={(event) => setSeatCode(event.target.value)} className={`mt-1 ${seatInputClassName}`} />
+            {seat ? "Seat Code" : "Seat Number"}
+            {seat ? (
+              <input required maxLength={40} value={seatCode} onChange={(event) => setSeatCode(event.target.value)} className={`mt-1 ${seatInputClassName}`} />
+            ) : (
+              <span className="mt-1 flex min-h-11 overflow-hidden rounded-lg border border-[#DDE3F2] focus-within:border-[#8B8FD1] focus-within:ring-2 focus-within:ring-[#E7E8F8]">
+                <span className="inline-flex items-center border-r border-[#DDE3F2] bg-[#F8F9FF] px-3 text-sm font-semibold text-[#140B63]">
+                  {seatPrefix}-
+                </span>
+                <input
+                  required
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{3}"
+                  maxLength={3}
+                  placeholder="002"
+                  aria-label="Three-digit seat number"
+                  value={seatNumber}
+                  onChange={(event) => setSeatNumber(event.target.value.replace(/\D/g, "").slice(0, 3))}
+                  className="min-w-0 flex-1 bg-white px-3 py-2 text-sm text-[#140B63] outline-none"
+                />
+              </span>
+            )}
           </label>
+          {!seat && <p className="text-xs text-gray-500">The seat code will be {seatPrefix}-{seatNumber || "000"}. Enter the three-digit number you want.</p>}
           <p className="rounded-lg bg-[#F8F9FF] p-3 text-sm text-gray-600">
             {seat
               ? `Seat QR ID: ${seat.qrIdentifier ?? "Loading…"}`
-              : "A unique four-digit seat ID and QR code will be generated automatically when you save."}
+              : "A unique QR code will be generated automatically when you save. You can print it later from the seat list."}
           </p>
           <label className="block text-sm font-semibold text-gray-700">
             Status
@@ -157,6 +180,15 @@ function SeatStatus({ status }) {
   );
 }
 
+function DeactivatedSeatStatus() {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-yellow-300 bg-yellow-100 px-2.5 py-1 text-xs font-semibold text-yellow-900">
+      <span className="h-1.5 w-1.5 rounded-full bg-yellow-600" aria-hidden="true" />
+      Deactivated
+    </span>
+  );
+}
+
 function SummaryCard({ label, value, status }) {
   const style = status ? seatStatusStyles[status] : null;
   return (
@@ -198,6 +230,8 @@ function SeatDetailsDialog({
     && activeSession.sectionId === section.id
     && activeSession.seatId === seat.id;
   const selectedReason = unavailableReason === "Other" ? otherReason.trim() : unavailableReason;
+  const sectionClosed = section.status?.toLocaleLowerCase() === "closed";
+  const displayStatus = sectionClosed ? "Unavailable" : seat.status;
 
   return (
     <div
@@ -217,7 +251,7 @@ function SeatDetailsDialog({
             <h2 id="seat-details-heading" className="text-xl font-bold text-[#140B63]">{seat.seatCode}</h2>
             <p className="mt-1 text-sm text-gray-500">{section.name}</p>
           </div>
-          <SeatStatus status={seat.status} />
+          {seat.isActive ? <SeatStatus status={displayStatus} /> : <DeactivatedSeatStatus />}
         </div>
 
         <dl className="mt-5 grid grid-cols-1 gap-3 rounded-lg border border-[#E7EAF3] bg-[#FCFCFF] p-4 text-sm sm:grid-cols-2">
@@ -235,9 +269,15 @@ function SeatDetailsDialog({
           </div>
           <div>
             <dt className="text-xs text-gray-500">Section Status</dt>
-            <dd className="mt-0.5"><AdminSectionStatus status={section.status} /></dd>
+            <dd className="mt-0.5"><AdminSectionStatus status={section.status} isActive={section.is_active !== false} /></dd>
           </div>
-          {seat.status === "Unavailable" && (
+          {sectionClosed && (
+            <div className="sm:col-span-2">
+              <dt className="text-xs text-gray-500">Availability</dt>
+              <dd className="mt-0.5 font-semibold text-[#B91C1C]">Unavailable while the section is closed</dd>
+            </div>
+          )}
+          {!sectionClosed && seat.status === "Unavailable" && (
             <div className="sm:col-span-2">
               <dt className="text-xs text-gray-500">Reason</dt>
               <dd className="mt-0.5 font-semibold text-[#140B63]">{seat.unavailableReason || "Not specified"}</dd>
@@ -264,6 +304,21 @@ function SeatDetailsDialog({
           )}
         </dl>
 
+        {seat.qrIdentifier && (
+          <div className="mt-4 flex flex-col items-center gap-2 rounded-lg border border-[#E7EAF3] bg-white p-4">
+            <QRCodeSVG
+              value={new URL(`/check-in?seat=${encodeURIComponent(seat.qrIdentifier)}`, window.location.origin).toString()}
+              size={144}
+            />
+            <p className="text-xs text-gray-600">Scan to open check-in for {seat.seatCode}</p>
+          </div>
+        )}
+        {!seat.isActive && (
+          <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            This seat is deactivated and hidden from students.
+          </p>
+        )}
+
         {seat.status === "Occupied" && (
           <div className="mt-4 rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] p-3">
             <p className="text-sm text-[#1E3A8A]">
@@ -285,18 +340,27 @@ function SeatDetailsDialog({
         )}
 
         <div className="mt-4 flex flex-wrap justify-end gap-2">
-          <button type="button" onClick={onRegenerateQr} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#DDE3F2] bg-white px-3 py-2 text-sm font-semibold text-[#140B63]">
-            <QrCode className="h-4 w-4" aria-hidden="true" /> Regenerate QR ID
-          </button>
-          <button type="button" onClick={onEdit} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#DDE3F2] bg-white px-3 py-2 text-sm font-semibold text-[#140B63]">
-            <Pencil className="h-4 w-4" aria-hidden="true" /> Edit Seat
-          </button>
+          {seat.isActive && (
+            <>
+              <button type="button" onClick={onRegenerateQr} disabled={!seat.qrIdentifier} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#DDE3F2] bg-white px-3 py-2 text-sm font-semibold text-[#140B63] disabled:opacity-50">
+                <QrCode className="h-4 w-4" aria-hidden="true" /> Regenerate QR ID
+              </button>
+              <button type="button" onClick={onEdit} disabled={!seat.qrIdentifier} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#DDE3F2] bg-white px-3 py-2 text-sm font-semibold text-[#140B63] disabled:opacity-50">
+                <Pencil className="h-4 w-4" aria-hidden="true" /> Edit Seat
+              </button>
+            </>
+          )}
           <button type="button" onClick={onRemove} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#F0D9CE] bg-white px-3 py-2 text-sm font-semibold text-[#8A4934]">
-            <Archive className="h-4 w-4" aria-hidden="true" /> Remove / Deactivate
+            <Archive className="h-4 w-4" aria-hidden="true" /> {seat.isActive ? "Deactivate / Delete" : "Activate / Delete"}
           </button>
         </div>
 
-        {seat.status !== "Occupied" && !showReasonForm && (
+        {sectionClosed && (
+          <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            All seats are unavailable while this section is closed. Open the section to restore their individual availability.
+          </p>
+        )}
+        {seat.isActive && !sectionClosed && seat.status !== "Occupied" && !showReasonForm && (
           <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button type="button" onClick={onClose} className="min-h-11 rounded-lg border border-[#DDE3F2] px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">
               Close
@@ -321,7 +385,7 @@ function SeatDetailsDialog({
           </div>
         )}
 
-        {seat.status === "Available" && showReasonForm && (
+        {!sectionClosed && seat.status === "Available" && showReasonForm && (
           <div className="mt-5 rounded-lg border border-[#DDE3F2] bg-[#FCFCFF] p-4">
             <label className="block text-sm font-semibold text-gray-700" htmlFor="unavailable-reason">
               Reason for unavailability
@@ -386,7 +450,6 @@ export default function AdminSeatManagement() {
     adminSessionsLoading,
     setSeatAvailability,
     syncSeatRecord,
-    removeSeatRecord,
   } = useStudentSession();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -444,14 +507,16 @@ export default function AdminSeatManagement() {
     };
   }, []);
 
-  const selectedSection = sections.find((section) => section.id === sectionFilter);
+  const activeSections = sections.filter((section) => section.is_active !== false && !section.deleted_at);
+  const selectedSection = sections.find((section) => section.id === sectionFilter && !section.deleted_at);
   const activeSectionFilter = sectionFilter === "all" || selectedSection ? sectionFilter : "all";
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const displaySections = useMemo(() => catalogSyncError ? [] : sections
+    .filter((section) => !section.deleted_at)
     .filter((section) => activeSectionFilter === "all" || section.id === activeSectionFilter)
     .map((section) => ({
       ...section,
-      seats: section.seats.filter((seat) => (
+      seats: section.seats.filter((seat) => !seat.deleted_at && (
         !normalizedQuery
         || seat.id.toLocaleLowerCase().includes(normalizedQuery)
         || seat.seatCode.toLocaleLowerCase().includes(normalizedQuery)
@@ -462,7 +527,11 @@ export default function AdminSeatManagement() {
 
   const displayedSeatCodes = new Set(displaySections.flatMap((section) => section.seats.map((seat) => seat.seatCode)));
   const displayedDatabaseSeats = !catalogSyncError && Array.isArray(databaseSeats)
-    ? databaseSeats.filter((seat) => displayedSeatCodes.has(seat.seat_code))
+    ? databaseSeats.filter((seat) => (
+      displayedSeatCodes.has(seat.seat_code)
+      && seat.is_active !== false
+      && !seat.deleted_at
+    ))
     : null;
   const summary = displayedDatabaseSeats?.reduce((totals, seat) => {
     totals.total += 1;
@@ -477,7 +546,11 @@ export default function AdminSeatManagement() {
       ?.seats.find((seat) => seat.id === selectedSeatRef.seatId)
     : null;
   const selectedSeat = selectedSeatRecord
-    ? { ...selectedSeatRecord, qrIdentifier: qrIdentifiers[selectedSeatRecord.id] ?? selectedSeatRecord.qrIdentifier }
+    ? {
+      ...selectedSeatRecord,
+      qrIdentifier: qrIdentifiers[selectedSeatRecord.id] ?? selectedSeatRecord.qrIdentifier,
+      isActive: selectedSeatRecord.is_active !== false,
+    }
     : null;
   const selectedSeatSection = selectedSeat
     ? sections.find((section) => section.id === selectedSeatRef.sectionId)
@@ -500,13 +573,16 @@ export default function AdminSeatManagement() {
         setError(getSeatQrLabelErrorMessage(result.error));
         return;
       }
-      if (!result.data?.length) {
+      const printableLabels = (result.data ?? []).filter((item) => (
+        item.is_active !== false && item.section_is_active !== false
+      ));
+      if (!printableLabels.length) {
         setError("There are no seats with QR labels to print in this selection.");
         return;
       }
       setQrIdentifiers(Object.fromEntries(result.data.map((item) => [item.id, item.qr_identifier])));
       setQrIdentifiersError("");
-      setQrLabels(result.data.map((item) => ({
+      setQrLabels(printableLabels.map((item) => ({
         id: item.id,
         sectionId: item.section_id,
         sectionName: item.section_name,
@@ -605,49 +681,48 @@ export default function AdminSeatManagement() {
     setSeatForm(null);
     setError("");
     if (!seatForm.seat && result.data.qr_identifier) {
-      setSuccess(`Seat added with unique ID ${result.data.qr_identifier}.`);
-      setQrLabels([{
-        id: result.data.id,
-        sectionName: sections.find((item) => item.id === result.data.section_id)?.name ?? "Library section",
-        seatCode: result.data.seat_code,
-        qrIdentifier: result.data.qr_identifier,
-      }]);
+      setSuccess(`Seat ${result.data.seat_code} added with QR code ${result.data.qr_identifier}. You can view or print its QR label from the seat list.`);
     } else {
       setSuccess(seatForm.seat ? "Seat updated." : "Seat added.");
     }
   };
 
-  const confirmSeatRemoval = async () => {
+  const confirmSeatRemoval = async (action) => {
     if (!pendingRemoval) return;
     const { seat, section } = pendingRemoval;
-    if (adminSessionsLoading || adminSessionsError) {
+    if (action !== "activate" && (adminSessionsLoading || adminSessionsError)) {
       setError("Cannot verify recorded active sessions right now. Refresh and try again.");
       setPendingRemoval(null);
       return;
     }
-    if (seat.status === "Occupied" || (
+    if (action !== "activate" && (seat.status === "Occupied" || (
       adminSessions.some((item) => item.sessionStatus === "active"
         && item.sectionId === section.id
         && item.seatId === seat.id)
-    )) {
-      setError("This seat has an active or occupied session and cannot be removed.");
+    ))) {
+      setError("This seat has an active or occupied session and cannot be changed.");
       setPendingRemoval(null);
       return;
     }
     setSaving(true);
-    const result = await deactivateSeat(seat.seatCode);
+    const result = await updateSeatLifecycle(seat.seatCode, action);
     setSaving(false);
     setPendingRemoval(null);
     if (result.error) {
       setError(result.error.message);
       return;
     }
-    if (result.data) syncSeatRecord(result.data, seat.seatCode);
-    else removeSeatRecord(section.id, seat.seatCode);
+    if (!result.data) {
+      setError(`No database record was returned while attempting to ${action} this seat.`);
+      return;
+    }
+    syncSeatRecord(result.data, seat.seatCode);
     setError("");
-    setSuccess(result.data
-      ? "Seat was safely marked unavailable. No historical session records were deleted."
-      : "Seat removed. No historical session records were deleted.");
+    setSuccess(action === "delete"
+      ? `Seat ${seat.seatCode} archived from the catalog. Historical session records remain linked.`
+      : action === "activate"
+        ? `Seat ${seat.seatCode} activated.`
+        : `Seat ${seat.seatCode} deactivated and hidden from students.`);
     setSelectedSeatRef(null);
   };
 
@@ -662,10 +737,10 @@ export default function AdminSeatManagement() {
           <button
             data-tour-anchor="admin-seat-create"
             type="button"
-            disabled={!sections.length || Boolean(catalogSyncError)}
+            disabled={!activeSections.length || Boolean(catalogSyncError)}
             onClick={() => {
               setError("");
-              setSeatForm({ seat: null, sectionId: selectedSection?.id ?? sections[0]?.id });
+              setSeatForm({ seat: null, sectionId: activeSections.find((section) => section.id === selectedSection?.id)?.id ?? activeSections[0]?.id });
             }}
             className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#140B63] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
@@ -675,7 +750,7 @@ export default function AdminSeatManagement() {
             data-tour-anchor="admin-seat-labels"
             type="button"
             onClick={() => void printSeatQrLabels(selectedSection?.id ?? null)}
-            disabled={loadingQrLabels || !sections.length}
+            disabled={loadingQrLabels || !activeSections.length}
             className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[#DDE3F2] bg-white px-4 py-2 text-sm font-semibold text-[#140B63] disabled:opacity-50"
           >
             <Printer className="h-4 w-4" aria-hidden="true" />
@@ -717,13 +792,17 @@ export default function AdminSeatManagement() {
             className="min-h-11 min-w-48 rounded-lg border border-[#DDE3F2] bg-white px-3 text-sm font-medium text-[#140B63] outline-none focus:border-[#8B8FD1] focus:ring-2 focus:ring-[#E7E8F8]"
           >
             <option value="all">All Sections</option>
-            {sections.map((section) => <option key={section.id} value={section.id}>{section.name}</option>)}
+                {sections.filter((section) => !section.deleted_at).map((section) => (
+                  <option key={section.id} value={section.id}>
+                    {section.name}{section.is_active === false ? " (deactivated)" : ""}
+                  </option>
+                ))}
           </select>
         </label>
       </section>
       {qrIdentifiersError && (
         <p role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          {qrIdentifiersError} Seat QR actions are disabled until the IDs can be loaded.
+          {qrIdentifiersError} QR printing and regeneration are unavailable until the identifiers can be loaded.
         </p>
       )}
 
@@ -744,7 +823,7 @@ export default function AdminSeatManagement() {
       {displaySections.length ? (
         <div className="space-y-4">
           {displaySections.map((section) => {
-            const databaseCounts = getSeatCountsForSection(catalogSyncError ? null : databaseSeats, section.id);
+            const databaseCounts = getSeatCountsForSection(catalogSyncError ? null : databaseSeats, section.id, section.status);
             return (
               <section key={section.id} aria-label={`${section.name} seats`} className="min-w-0 rounded-xl border border-[#DDE3F2] bg-white p-4 shadow-sm sm:p-5">
                 <div className="mb-4 flex flex-col gap-2 border-b border-[#EEF0F5] pb-3 sm:flex-row sm:items-start sm:justify-between">
@@ -756,33 +835,40 @@ export default function AdminSeatManagement() {
                         : "Database seat counts unavailable"}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => void printSeatQrLabels(section.id)}
-                    disabled={loadingQrLabels}
-                    className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-[#DDE3F2] px-3 py-2 text-sm font-semibold text-[#140B63]"
-                  >
-                    <Printer className="h-4 w-4" aria-hidden="true" /> Print section QR labels
-                  </button>
-                  <AdminSectionStatus status={section.status} />
+                  {section.is_active !== false && (
+                    <button
+                      type="button"
+                      onClick={() => void printSeatQrLabels(section.id)}
+                      disabled={loadingQrLabels}
+                      className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-[#DDE3F2] px-3 py-2 text-sm font-semibold text-[#140B63]"
+                    >
+                      <Printer className="h-4 w-4" aria-hidden="true" /> Print section QR labels
+                    </button>
+                  )}
+                    <AdminSectionStatus status={section.status} isActive={section.is_active !== false} />
                 </div>
                 {section.seats.length ? (
                   <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9 2xl:grid-cols-12">
-                    {section.seats.map((seat, index) => (
-                    <button
-                      key={seat.id}
-                      data-tour-anchor={index === 0 ? "admin-seat-list" : undefined}
-                      type="button"
-                      onClick={() => openSeatDetails(section.id, seat.id)}
-                      disabled={qrIdentifiersLoading || Boolean(qrIdentifiersError)}
-                      aria-label={`${seat.seatCode}, ${seat.status}`}
-                      className={`flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 rounded-lg border px-1 py-2 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B5FC7] ${seatStatusStyles[seat.status].tile}`}
-                    >
-                      <span className={`h-2 w-2 rounded-full ${seatStatusStyles[seat.status].dot}`} aria-hidden="true" />
-                      <span className="break-all text-center text-[#140B63]">{seat.seatCode}</span>
-                      <span className="text-[10px] font-medium text-gray-600">{seat.status}</span>
-                    </button>
-                    ))}
+                    {section.seats.map((seat, index) => {
+                      const sectionClosed = section.status?.toLocaleLowerCase() === "closed";
+                      const effectiveStatus = sectionClosed ? "Unavailable" : seat.status;
+                      const deactivated = seat.is_active === false;
+                      return (
+                        <button
+                          key={seat.id}
+                          data-tour-anchor={index === 0 ? "admin-seat-list" : undefined}
+                          type="button"
+                          onClick={() => openSeatDetails(section.id, seat.id)}
+                          disabled={qrIdentifiersLoading}
+                          aria-label={`${seat.seatCode}, ${effectiveStatus}${seat.is_active === false ? ", deactivated" : ""}`}
+                          className={`flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 rounded-lg border px-1 py-2 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B5FC7] ${deactivated ? "border-yellow-300 bg-yellow-100 hover:bg-yellow-200" : seatStatusStyles[effectiveStatus].tile}`}
+                        >
+                          <span className={`h-2 w-2 rounded-full ${deactivated ? "bg-yellow-600" : seatStatusStyles[effectiveStatus].dot}`} aria-hidden="true" />
+                          <span className="break-all text-center text-[#140B63]">{seat.seatCode}</span>
+                          <span className={`text-[10px] font-medium ${deactivated ? "text-yellow-900" : "text-gray-600"}`}>{deactivated ? "Deactivated" : effectiveStatus}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 ) : (
                   <p data-tour-anchor="admin-seat-list" className="rounded-lg border border-dashed border-[#DDE3F2] px-4 py-6 text-center text-sm text-gray-500">
@@ -854,7 +940,7 @@ export default function AdminSeatManagement() {
       )}
       {seatForm && (
         <SeatFormDialog
-          sections={sections}
+          sections={activeSections}
           seat={seatForm.seat}
           initialSectionId={seatForm.sectionId}
           busy={saving}
@@ -864,15 +950,12 @@ export default function AdminSeatManagement() {
         />
       )}
       {pendingRemoval && (
-        <ConfirmationDialog
-          title={`Remove ${pendingRemoval.seat.seatCode}?`}
-          message="The seat is checked for active and historical sessions first. Active seats cannot be removed; seats with history are marked unavailable instead of deleting usage records."
-          details={[
-            { label: "Section", value: pendingRemoval.section.name },
-            { label: "Seat Status", value: pendingRemoval.seat.status },
-          ]}
-          confirmLabel={saving ? "Checking…" : "Confirm Remove"}
-          onConfirm={confirmSeatRemoval}
+        <ResourceLifecycleDialog
+          resourceType="Seat"
+          name={pendingRemoval.seat.seatCode}
+          isActive={pendingRemoval.seat.isActive}
+          busy={saving}
+          onConfirm={(action) => void confirmSeatRemoval(action)}
           onCancel={() => setPendingRemoval(null)}
         />
       )}

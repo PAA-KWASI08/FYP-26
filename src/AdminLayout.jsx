@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   Armchair,
   Bell,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   History,
   LayoutDashboard,
   Library,
   LogOut,
+  UserRound,
   UsersRound,
 } from "lucide-react";
 import libraryImage from "./assets/images/balme-library.jpg";
@@ -31,6 +33,8 @@ export default function AdminLayout() {
   const location = useLocation();
   const { profile, signOut } = useAuth();
   const [expanded, setExpanded] = useState(() => window.matchMedia("(min-width: 768px)").matches);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef(null);
   const [geofenceAlertCount, setGeofenceAlertCount] = useState(0);
   const [geofenceAlertError, setGeofenceAlertError] = useState("");
 
@@ -60,13 +64,32 @@ export default function AdminLayout() {
   }, []);
 
   useEffect(() => {
+    if (!profileMenuOpen) return undefined;
+
+    const closeOnOutsideClick = (event) => {
+      if (!profileMenuRef.current?.contains(event.target)) setProfileMenuOpen(false);
+    };
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setProfileMenuOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [profileMenuOpen]);
+
+  useEffect(() => {
+    if (profile?.must_change_password) return undefined;
     const initialRefresh = window.setTimeout(() => void refreshGeofenceAlertCount(), 0);
     const timer = window.setInterval(() => void refreshGeofenceAlertCount(), 15000);
     return () => {
       window.clearTimeout(initialRefresh);
       window.clearInterval(timer);
     };
-  }, [refreshGeofenceAlertCount]);
+  }, [profile?.must_change_password, refreshGeofenceAlertCount]);
 
   const logout = async () => {
     await signOut();
@@ -164,23 +187,61 @@ export default function AdminLayout() {
         <header className="flex shrink-0 items-center justify-between border-b border-black/10 bg-white px-4 py-3 sm:px-6">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#5B5FC7]">Administration</p>
-            <h1 className="text-lg font-bold text-[#140B63]">{navigationItems.find((item) => item.to === location.pathname)?.label ?? "Dashboard"}</h1>
+            <h1 className="text-lg font-bold text-[#140B63]">
+              {location.pathname === "/admin/profile"
+                ? "Admin Profile"
+                : navigationItems.find((item) => item.to === location.pathname)?.label ?? "Dashboard"}
+            </h1>
           </div>
-          <button
-            data-tour-anchor="admin-password-settings"
-            type="button"
-            onClick={() => navigate("/admin/change-password")}
-            className="flex items-center gap-3 rounded-lg border border-[#DDE3F2] bg-[#FCFCFF] px-3 py-2 text-left transition hover:border-[#5B5FC7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B5FC7]"
-            aria-label="Change administrator password"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#140B63] text-sm font-semibold text-white" aria-hidden="true">
-              A
-            </span>
-            <span className="hidden sm:block">
-              <span className="block text-sm font-bold text-[#140B63]">Admin</span>
-              <span className="block text-xs text-gray-500">Library Administrator</span>
-            </span>
-          </button>
+          <div ref={profileMenuRef} className="relative">
+            <button
+              data-tour-anchor="admin-password-settings"
+              type="button"
+              onClick={() => setProfileMenuOpen((open) => !open)}
+              className="flex items-center gap-3 rounded-lg border border-[#DDE3F2] bg-[#FCFCFF] px-3 py-2 text-left transition hover:border-[#5B5FC7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B5FC7]"
+              aria-label="Administrator profile menu"
+              aria-haspopup="menu"
+              aria-expanded={profileMenuOpen}
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#140B63] text-sm font-semibold text-white" aria-hidden="true">
+                A
+              </span>
+              <span className="hidden sm:block">
+                <span className="block text-sm font-bold text-[#140B63]">{profile?.student_id ?? "admin001"}</span>
+                <span className="block text-xs text-gray-500">Library Administrator</span>
+              </span>
+              <ChevronDown className={`h-4 w-4 flex-shrink-0 text-[#5B5FC7] transition-transform ${profileMenuOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+            </button>
+            {profileMenuOpen && (
+              <div
+                className="absolute right-0 top-full z-30 mt-2 w-52 overflow-hidden rounded-xl border border-[#DDE3F2] bg-white py-1 shadow-lg"
+                role="menu"
+                aria-label="Administrator profile menu"
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setProfileMenuOpen(false);
+                    navigate("/admin/profile");
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-[#140B63] transition hover:bg-[#F2F2FF]"
+                >
+                  <UserRound className="h-4 w-4" aria-hidden="true" />
+                  View Profile
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={logout}
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-[#140B63] transition hover:bg-[#F2F2FF]"
+                >
+                  <LogOut className="h-4 w-4" aria-hidden="true" />
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
         </header>
         {geofenceAlertCount > 0 && (
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 sm:px-6" role="alert">

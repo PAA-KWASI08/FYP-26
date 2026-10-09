@@ -23,6 +23,7 @@ const StudentIssueReport = lazy(() => import("./StudentIssueReport"));
 const ChangePassword = lazy(() => import("./ChangePassword"));
 const StudentLayout = lazy(() => import("./StudentLayout"));
 const AdminLayout = lazy(() => import("./AdminLayout"));
+const AdminProfile = lazy(() => import("./AdminProfile"));
 const AdminDashboard = lazy(() => import("./AdminDashboard"));
 const AdminActiveSessions = lazy(() => import("./AdminActiveSessions"));
 const AdminAnalytics = lazy(() => import("./AdminAnalytics"));
@@ -37,8 +38,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
                   <Route path="/" element={<App />} />
                   <Route path="/admin" element={<Admin />} />
                   <Route element={<RequireAuth role="admin" />}>
-                     <Route path="/admin/change-password" element={<ChangePassword />} />
                      <Route element={<AdminLayout />}>
+                        <Route path="/admin/change-password" element={<ChangePassword />} />
+                        <Route path="/admin/profile" element={<AdminProfile />} />
                         <Route path="/admin/dashboard" element={<AdminDashboard />} />
                         <Route path="/admin/sections" element={<AdminSections />} />
                         <Route path="/admin/notifications" element={<AdminAnnouncements />} />
@@ -50,8 +52,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
                      </Route>
                   </Route>
                   <Route element={<RequireAuth role="student" />}>
-                     <Route path="/change-password" element={<ChangePassword />} />
                      <Route element={<StudentLayout />}>
+                        <Route path="/change-password" element={<ChangePassword />} />
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/sections" element={<SeatMap />} />
                         <Route path="/check-in" element={<CheckIn />} />

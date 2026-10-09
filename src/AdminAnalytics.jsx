@@ -61,15 +61,7 @@ function formatExportDuration(minutes) {
   return hours ? `${hours}h ${remainingMinutes}m` : `${remainingMinutes}m`;
 }
 
-function csvCell(value) {
-  let text = String(value ?? "");
-  if (/^[\s]*[=+\-@]/.test(text)) text = `'${text}`;
-  return `"${text.replaceAll('"', '""')}"`;
-}
-
-function downloadCsv(filename, rows) {
-  const csv = `\uFEFF${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}`;
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+function downloadBlob(filename, blob) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -78,6 +70,94 @@ function downloadCsv(filename, rows) {
   link.click();
   link.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function addReportSheet(workbook, {
+  name,
+  title,
+  subtitle,
+  generatedAt,
+  dateRange,
+  filters,
+  note,
+  columns,
+  rows,
+}) {
+  const worksheet = workbook.addWorksheet(name, {
+    views: [{ state: "frozen", ySplit: 8 }],
+    pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+  });
+  const lastColumn = columns.length;
+  worksheet.columns = columns.map(({ key, width, numFmt }) => ({
+    key,
+    width,
+    style: {
+      alignment: { vertical: "top", wrapText: true },
+      ...(numFmt ? { numFmt } : {}),
+    },
+  }));
+
+  worksheet.mergeCells(1, 1, 1, lastColumn);
+  worksheet.getCell("A1").value = title;
+  worksheet.getCell("A1").font = { name: "Aptos Display", size: 19, bold: true, color: { argb: "FFFFFFFF" } };
+  worksheet.getCell("A1").fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF140B63" } };
+  worksheet.getCell("A1").alignment = { vertical: "middle" };
+  worksheet.getRow(1).height = 34;
+
+  worksheet.mergeCells(2, 1, 2, lastColumn);
+  worksheet.getCell("A2").value = subtitle;
+  worksheet.getCell("A2").font = { name: "Aptos", size: 11, italic: true, color: { argb: "FF4B5563" } };
+
+  const metadata = [
+    ["Generated", generatedAt],
+    ["Date range", dateRange],
+    ["Filters", filters],
+  ];
+  metadata.forEach(([label, value], index) => {
+    const rowNumber = index + 3;
+    worksheet.getCell(rowNumber, 1).value = label;
+    worksheet.getCell(rowNumber, 1).font = { bold: true, color: { argb: "FF140B63" } };
+    worksheet.getCell(rowNumber, 2).value = value;
+    if (lastColumn > 2) worksheet.mergeCells(rowNumber, 2, rowNumber, lastColumn);
+  });
+
+  worksheet.mergeCells(6, 1, 6, lastColumn);
+  worksheet.getCell("A6").value = note;
+  worksheet.getCell("A6").font = { size: 10, color: { argb: "FF4B5563" } };
+  worksheet.getCell("A6").alignment = { wrapText: true, vertical: "middle" };
+  worksheet.getRow(6).height = 30;
+
+  worksheet.addTable({
+    name: `Report${worksheet.id}`,
+    ref: "A8",
+    headerRow: true,
+    style: { theme: "TableStyleMedium2", showRowStripes: true },
+    columns: columns.map(({ header, key }) => ({ name: header, key, filterButton: true })),
+    rows: rows.map((row) => columns.map(({ key }) => row[key] ?? null)),
+  });
+  worksheet.eachRow((row, rowNumber) => {
+    if (rowNumber >= 8) {
+      row.alignment = { vertical: "top", wrapText: true };
+      if (rowNumber > 8) row.height = 30;
+    }
+  });
+  return worksheet;
+}
+
+function uniqueWorksheetName(workbook, value) {
+  const base = value
+    .replace(/[\\/*?:[\]]/g, " ")
+    .replace(/^'+|'+$/g, "")
+    .trim()
+    .slice(0, 31) || "Section";
+  let name = base;
+  let suffix = 2;
+  while (workbook.getWorksheet(name)) {
+    const suffixText = ` (${suffix})`;
+    name = `${base.slice(0, 31 - suffixText.length)}${suffixText}`;
+    suffix += 1;
+  }
+  return name;
 }
 
 function filenamePart(value) {
@@ -282,6 +362,7 @@ export default function AdminAnalytics() {
   const [reportPeriod, setReportPeriod] = useState("All recorded data");
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [exportError, setExportError] = useState("");
+  const [exportingWorkbook, setExportingWorkbook] = useState(false);
   const [issueReports, setIssueReports] = useState([]);
   const [issueReportsLoading, setIssueReportsLoading] = useState(true);
   const [issueReportsError, setIssueReportsError] = useState("");
@@ -456,84 +537,227 @@ export default function AdminAnalytics() {
     .map((item) => item.duration);
   const reportStart = range?.start && !range.invalid ? formatDateTime(range.start) : "All recorded dates";
   const reportEnd = range?.end && !range.invalid ? formatDateTime(new Date(range.end.getTime() - 1)) : "";
+  const printableDateRange = reportEnd ? `${reportStart} – ${reportEnd}` : reportStart;
+  const printableSectionFilter = sectionFilter === "All Sections"
+    ? sectionFilter
+    : sections.find((item) => item.id === sectionFilter)?.name ?? "Selected section";
+  const printableActiveSessions = records.filter((item) => item.sessionStatus === "active").length;
+  const monthlyTrendRows = [...monthCounts.entries()].sort(([first], [second]) => first.localeCompare(second));
 
-  const exportCsv = () => {
+  const exportWorkbook = async () => {
     setExportError("");
     if (customRangeInvalid) {
       setExportError("Set a valid date range before exporting.");
       return;
     }
 
-    const rows = [
-      ["Scan2Seat Usage & Analytics Report"],
-      ["Generated", formatDateTime(now)],
-      ["Date range", reportEnd ? `${reportStart} – ${reportEnd}` : reportStart],
-      ["Section filter", sectionFilter],
-      ["Seat search", seatSearch || "All seats"],
-      ["Student search", studentSearch || "All students"],
-      [],
-      ["Summary"],
-      ["Recorded check-ins", records.length],
-      ["Completed sessions", completedRecords.length],
-      ["Active sessions", records.length - completedRecords.length],
-      ["Completed study time", formatExportDuration(completedRecords.length
-        ? completedRecords.reduce((sum, item) => sum + (item.duration ?? 0), 0)
-        : null)],
-      [],
-      ["Section Usage"],
-      ["Section", "Check-ins", "Completed Sessions", "Study Time", "Average Duration"],
-      ...sectionRows.map((item) => [
-        item.name,
-        item.checkIns,
-        item.completed,
-        item.completed ? formatExportDuration(item.minutes) : "Not recorded",
-        item.average === null ? "Not recorded" : formatExportDuration(item.average),
-      ]),
-      [],
-      ["Seat Usage"],
-      ["Seat", "Section", "Recorded Sessions", "Study Time", "Current Status"],
-      ...seatRowsForSearch.map((item) => [
-        item.seatCode,
-        item.section,
-        item.count,
-        item.count ? formatExportDuration(item.minutes) : "Not recorded",
-        item.status,
-      ]),
-      [],
-      ["Session Records"],
-      ["Student ID", "Student Name", "Section", "Seat", "Check-In", "Check-Out", "Duration", "Status", "Location"],
-      ...records.map((item) => [
-        item.studentId ?? item.userId ?? "—",
-        item.studentName ?? "—",
-        item.sectionName,
-        item.seatCode,
-        formatDateTime(item.checkInTime),
-        formatDateTime(item.checkOutTime),
-        formatExportDuration(item.duration),
-        item.isCompleted ? "Completed" : "Active",
-        item.locationStatus ?? "—",
-      ]),
-      [],
-      ["Student Issue Reports"],
-      ["Submitted", "Student ID", "Student Name", "Issue Type", "Seat or Location", "Details"],
-      ...issueReports.map((report) => [
-        formatDateTime(report.created_at),
-        report.student_id ?? "—",
-        report.student_name ?? "—",
-        report.category,
-        report.seat_name ?? "—",
-        report.details,
-      ]),
-    ];
-
+    setExportingWorkbook(true);
     try {
-      downloadCsv(
-        `scan2seat-analytics-${filenamePart(dateOption)}-${new Date().toISOString().slice(0, 10)}.csv`,
-        rows,
+      const { default: ExcelJS } = await import("exceljs");
+      const workbook = new ExcelJS.Workbook();
+      const rangeLabel = reportEnd ? `${reportStart} – ${reportEnd}` : reportStart;
+      const sectionLabel = sectionFilter === "All Sections"
+        ? sectionFilter
+        : sections.find((item) => item.id === sectionFilter)?.name ?? "Selected section";
+      const filterLabel = [
+        `Section: ${sectionLabel}`,
+        `Seat search: ${seatSearch.trim() || "All seats"}`,
+        `Student search: ${studentSearch.trim() || "All students"}`,
+      ].join(" · ");
+      const commonSheetDetails = {
+        generatedAt: now,
+        dateRange: rangeLabel,
+        filters: filterLabel,
+      };
+      const studyMinutes = completedDurations.length
+        ? completedDurations.reduce((sum, value) => sum + value, 0)
+        : null;
+      const activeSessions = records.filter((item) => item.sessionStatus === "active").length;
+      const peakRows = [
+        ...[...periodCounts.entries()].map(([label, count]) => ({ category: "Time of day", label, count })),
+        ...weekdays.flatMap((label) => {
+          const count = dayCounts.get(label);
+          return count ? [{ category: "Day of week", label, count }] : [];
+        }),
+        ...[...monthCounts.entries()].map(([key, count]) => ({
+          category: "Month",
+          label: new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" })
+            .format(new Date(`${key}-01T12:00:00`)),
+          count,
+        })),
+      ];
+      const dateFormat = "mmm d, yyyy h:mm AM/PM";
+      const minuteFormat = '0 "minutes"';
+      const sessionColumns = [
+        { header: "Student ID", key: "studentId", width: 18 },
+        { header: "Student name", key: "studentName", width: 26 },
+        { header: "Library section", key: "section", width: 28 },
+        { header: "Seat", key: "seat", width: 18 },
+        { header: "Check-in date and time", key: "checkIn", width: 26, numFmt: dateFormat },
+        { header: "Check-out date and time", key: "checkOut", width: 26, numFmt: dateFormat },
+        { header: "Study time (minutes)", key: "minutes", width: 23, numFmt: minuteFormat },
+        { header: "Session status", key: "status", width: 18 },
+        { header: "Location status", key: "location", width: 24 },
+      ];
+      const sessionRows = (items) => items.map((item) => ({
+        studentId: item.studentId ?? item.userId ?? "Not recorded",
+        studentName: item.studentName ?? "Not recorded",
+        section: item.sectionName,
+        seat: item.seatCode,
+        checkIn: validDate(item.checkInTime),
+        checkOut: validDate(item.checkOutTime),
+        minutes: item.duration ?? "Not recorded",
+        status: item.isCompleted ? "Completed" : "Active",
+        location: item.locationStatus ?? "Not recorded",
+      }));
+
+      addReportSheet(workbook, {
+        name: "Summary",
+        title: "Scan2Seat Usage & Analytics",
+        subtitle: "A plain-language overview of recorded library seat activity.",
+        ...commonSheetDetails,
+        note: "A check-in is one recorded seat session. Study time totals and averages use completed sessions only. Active sessions are still in progress.",
+        columns: [
+          { header: "Measure", key: "measure", width: 30 },
+          { header: "Result", key: "result", width: 24 },
+          { header: "What this means", key: "meaning", width: 72 },
+        ],
+        rows: [
+          { measure: "Recorded check-ins", result: records.length, meaning: "Number of recorded seat sessions that match the selected filters." },
+          { measure: "Completed sessions", result: completedRecords.length, meaning: "Sessions with a recorded check-out time." },
+          { measure: "Active sessions", result: activeSessions, meaning: "Sessions that are currently in progress." },
+          { measure: "Completed study time (minutes)", result: studyMinutes ?? "Not enough recorded data", meaning: "Total study time from completed sessions only; active session time is not included." },
+          { measure: "Average completed session (minutes)", result: averageStudyMinutes ?? "Not enough recorded data", meaning: "Average duration of completed sessions." },
+          { measure: "Most-used section", result: enoughPeakData && topSection ? topSection.names.join(", ") : "Not enough recorded data", meaning: enoughPeakData && topSection ? `${topSection.count} recorded check-ins.` : "At least two matching records are needed to identify a peak." },
+          { measure: "Most-used seat", result: enoughPeakData && highestSeat ? highestSeat.seatCode : "Not enough recorded data", meaning: enoughPeakData && highestSeat ? `${highestSeat.count} recorded sessions in ${highestSeat.section}.` : "At least two matching records are needed to identify a peak." },
+          { measure: "Busiest time of day", result: enoughPeakData && topPeriod ? topPeriod.names.join(", ") : "Not enough recorded data", meaning: "Based on the local time recorded at check-in." },
+        ],
+      });
+
+      addReportSheet(workbook, {
+        name: "All Sections",
+        title: "Usage by Library Section",
+        subtitle: "Compare recorded activity and completed study time across library sections.",
+        ...commonSheetDetails,
+        note: "Check-ins count all matching sessions. Study time and average duration are calculated from completed sessions only. Sections with no check-ins are included.",
+        columns: [
+          { header: "Library section", key: "section", width: 30 },
+          { header: "Recorded check-ins", key: "checkIns", width: 20 },
+          { header: "Completed sessions", key: "completed", width: 22 },
+          { header: "Completed study time (minutes)", key: "minutes", width: 32, numFmt: minuteFormat },
+          { header: "Average completed session (minutes)", key: "average", width: 38, numFmt: minuteFormat },
+        ],
+        rows: sectionRows.map((item) => ({
+          section: item.name,
+          checkIns: item.checkIns,
+          completed: item.completed,
+          minutes: item.completed ? item.minutes : "Not recorded",
+          average: item.average ?? "Not recorded",
+        })),
+      });
+
+      addReportSheet(workbook, {
+        name: "Seat Usage",
+        title: "Recorded Seat Usage",
+        subtitle: "See how often each seat was used and its current recorded status.",
+        ...commonSheetDetails,
+        note: "This list includes seats with matching recorded activity. If you searched for a seat, matching seats with no recorded session are also shown. Past usage does not mean a seat is occupied now.",
+        columns: [
+          { header: "Seat", key: "seat", width: 20 },
+          { header: "Library section", key: "section", width: 30 },
+          { header: "Recorded sessions", key: "count", width: 20 },
+          { header: "Study time (minutes)", key: "minutes", width: 24, numFmt: minuteFormat },
+          { header: "Current recorded status", key: "status", width: 26 },
+        ],
+        rows: seatRowsForSearch.map((item) => ({
+          seat: item.seatCode,
+          section: item.section,
+          count: item.count,
+          minutes: item.count ? item.minutes : "Not recorded",
+          status: item.status,
+        })),
+      });
+
+      addReportSheet(workbook, {
+        name: "All Sessions",
+        title: "All Sections — Individual Sessions",
+        subtitle: "One row per matching seat session across the sections included by the active filters.",
+        ...commonSheetDetails,
+        note: "This combined sheet includes all matching sessions across the section or sections allowed by the active filters. Check-in and check-out are local date and time values. Study time is in minutes. A blank check-out indicates a session that has not been completed.",
+        columns: sessionColumns,
+        rows: sessionRows(records),
+      });
+
+      sections.forEach((section) => {
+        const sectionRecords = records.filter((item) => item.sectionId === section.id);
+        const completedSectionRecords = sectionRecords.filter((item) => item.isCompleted);
+        const completedSectionMinutes = completedSectionRecords.reduce((sum, item) => sum + (item.duration ?? 0), 0);
+        addReportSheet(workbook, {
+          name: uniqueWorksheetName(workbook, section.name),
+          title: `${section.name} — Usage Details`,
+          subtitle: "Individual matching seat sessions for this library section.",
+          ...commonSheetDetails,
+          note: `Matching sessions: ${sectionRecords.length}. Completed sessions: ${completedSectionRecords.length}. Completed study time: ${formatExportDuration(completedSectionRecords.length ? completedSectionMinutes : null)}. The active date, seat, student, and section filters apply to this sheet.`,
+          columns: sessionColumns,
+          rows: sessionRows(sectionRecords),
+        });
+      });
+
+      addReportSheet(workbook, {
+        name: "Usage Trends",
+        title: "Usage by Time and Day",
+        subtitle: "Understand when matching seat check-ins were recorded.",
+        ...commonSheetDetails,
+        note: "Time-of-day and weekday values use local check-in time. Morning is 5:00–11:59, afternoon is 12:00–16:59, and evening includes 17:00–4:59. Monthly values use the month of check-in.",
+        columns: [
+          { header: "Grouping", key: "category", width: 24 },
+          { header: "Time period", key: "label", width: 30 },
+          { header: "Recorded check-ins", key: "count", width: 22 },
+        ],
+        rows: peakRows,
+      });
+
+      addReportSheet(workbook, {
+        name: "Student Issue Reports",
+        title: "Student Issue Reports",
+        subtitle: "Submitted reports about library seats and study spaces.",
+        ...commonSheetDetails,
+        note: issueReportsError
+          ? `${issueReportsError} No issue-report rows could be exported. Issue reports are not filtered by the session date, section, seat, or student filters above.`
+          : issueReportsLoading
+            ? "Issue reports are still loading; this sheet currently contains no report rows. Issue reports are not filtered by the session date, section, seat, or student filters above."
+            : "Issue reports are included for administrative context and are not filtered by the session date, section, seat, or student filters above.",
+        columns: [
+          { header: "Submitted date and time", key: "submitted", width: 26, numFmt: dateFormat },
+          { header: "Student ID", key: "studentId", width: 18 },
+          { header: "Student name", key: "studentName", width: 26 },
+          { header: "Issue type", key: "category", width: 25 },
+          { header: "Seat or location", key: "location", width: 28 },
+          { header: "Report details", key: "details", width: 72 },
+        ],
+        rows: issueReports.map((report) => ({
+          submitted: validDate(report.created_at),
+          studentId: report.student_id ?? "Not recorded",
+          studentName: report.student_name ?? "Not recorded",
+          category: report.category,
+          location: report.seat_name ?? "Not provided",
+          details: report.details,
+        })),
+      });
+
+      workbook.creator = "Scan2Seat";
+      workbook.subject = "Library seat usage and analytics";
+      workbook.created = now;
+      const buffer = await workbook.xlsx.writeBuffer();
+      downloadBlob(
+        `scan2seat-analytics-${filenamePart(dateOption)}-${new Date().toISOString().slice(0, 10)}.xlsx`,
+        new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
       );
     } catch (error) {
-      console.error("Unable to export analytics as CSV:", error);
-      setExportError("The Excel-compatible report could not be generated. Try again.");
+      console.error("Unable to export analytics workbook:", error);
+      setExportError("The formatted Excel workbook could not be generated. Try again.");
+    } finally {
+      setExportingWorkbook(false);
     }
   };
 
@@ -566,85 +790,148 @@ export default function AdminAnalytics() {
     <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-4 p-3 sm:gap-5 sm:p-5">
       <style>{`
         @media print {
+          @page { size: landscape; margin: 12mm; }
           body * { visibility: hidden !important; }
           #analytics-print-report, #analytics-print-report * { visibility: visible !important; }
           #analytics-print-report {
             display: block !important;
             position: absolute !important;
-            inset: 0 !important;
+            top: 0 !important;
+            left: 0 !important;
             width: 100% !important;
-            padding: 16px !important;
-            color: #111 !important;
+            padding: 0 !important;
+            color: #1f2937 !important;
             background: #fff !important;
+            font-family: Arial, sans-serif !important;
+            font-size: 9pt !important;
           }
-          #analytics-print-report table { width: 100%; border-collapse: collapse; font-size: 9pt; }
-          #analytics-print-report th, #analytics-print-report td { padding: 5px; border: 1px solid #aaa; text-align: left; }
-          #analytics-print-report h1, #analytics-print-report h2 { margin: 12px 0 6px; }
+          #analytics-print-report h1 { margin: 0; color: #140b63; font-size: 22pt; }
+          #analytics-print-report h2 { margin: 0 0 5px; color: #140b63; font-size: 13pt; }
+          #analytics-print-report p { margin: 3px 0; }
+          #analytics-print-report table { width: 100%; border-collapse: collapse; table-layout: auto; font-size: 8pt; }
+          #analytics-print-report th, #analytics-print-report td { padding: 5px 6px; border: 1px solid #cbd5e1; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+          #analytics-print-report th { color: #140b63; background: #eef0fa !important; font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          #analytics-print-report tbody tr:nth-child(even) { background: #f8f9fc !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          #analytics-print-report thead { display: table-header-group; }
           #analytics-print-report tr { break-inside: avoid; }
+          #analytics-print-report .analytics-print-header { margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #5b5fc7; }
+          #analytics-print-report .analytics-print-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 18px; margin-top: 8px; font-size: 8pt; }
+          #analytics-print-report .analytics-print-note { margin: 6px 0 9px; color: #4b5563; font-size: 8pt; }
+          #analytics-print-report .analytics-print-section { margin: 14px 0; }
+          #analytics-print-report .analytics-print-summary { break-inside: avoid-page; }
+          #analytics-print-report .analytics-print-records { break-inside: auto; }
+          #analytics-print-report .analytics-print-records tr { break-inside: avoid; }
         }
       `}</style>
       <section id="analytics-print-report" className="hidden" aria-hidden="true">
-        <h1>Scan2Seat Usage &amp; Analytics</h1>
-        <p>Generated: {formatDateTime(now)}</p>
-        <p>
-          Date range: {reportEnd ? `${reportStart} – ${reportEnd}` : reportStart}
-          {" · "}Section: {sectionFilter}
-          {" · "}Seat search: {seatSearch || "All"}
-          {" · "}Student search: {studentSearch || "All"}
-        </p>
-        <h2>Summary</h2>
-        <p>
-          Recorded check-ins: {records.length}
-          {" · "}Completed sessions: {completedRecords.length}
-          {" · "}Active sessions: {records.length - completedRecords.length}
-          {" · "}Completed study time: {formatExportDuration(completedRecords.length
-            ? completedRecords.reduce((sum, item) => sum + (item.duration ?? 0), 0)
-            : null)}
-        </p>
-        <h2>Section Usage</h2>
-        <table>
-          <thead><tr><th>Section</th><th>Check-ins</th><th>Completed</th><th>Study time</th><th>Average</th></tr></thead>
-          <tbody>{sectionRows.map((item) => (
-            <tr key={`print-section-${item.id}`}>
-              <td>{item.name}</td><td>{item.checkIns}</td><td>{item.completed}</td>
-              <td>{item.completed ? formatExportDuration(item.minutes) : "Not recorded"}</td>
-              <td>{item.average === null ? "Not recorded" : formatExportDuration(item.average)}</td>
-            </tr>
-          ))}</tbody>
-        </table>
-        <h2>Seat Usage</h2>
-        <table>
-          <thead><tr><th>Seat</th><th>Section</th><th>Recorded sessions</th><th>Study time</th><th>Current status</th></tr></thead>
-          <tbody>{seatRowsForSearch.map((item) => (
-            <tr key={`print-seat-${item.seatId}`}>
-              <td>{item.seatCode}</td><td>{item.section}</td><td>{item.count}</td>
-              <td>{item.count ? formatExportDuration(item.minutes) : "Not recorded"}</td><td>{item.status}</td>
-            </tr>
-          ))}</tbody>
-        </table>
-        <h2>Session Records</h2>
-        <table>
-          <thead><tr><th>Student ID</th><th>Student name</th><th>Section</th><th>Seat</th><th>Check-in</th><th>Check-out</th><th>Duration</th><th>Status</th></tr></thead>
-          <tbody>{records.map((item) => (
-            <tr key={`print-session-${item.id}`}>
-              <td>{item.studentId ?? item.userId ?? "—"}</td><td>{item.studentName ?? "—"}</td>
-              <td>{item.sectionName}</td><td>{item.seatCode}</td>
-              <td>{formatDateTime(item.checkInTime)}</td><td>{formatDateTime(item.checkOutTime)}</td>
-              <td>{formatExportDuration(item.duration)}</td><td>{item.isCompleted ? "Completed" : "Active"}</td>
-            </tr>
-          ))}</tbody>
-        </table>
-        <h2>Student Issue Reports</h2>
-        <table>
-          <thead><tr><th>Submitted</th><th>Student ID</th><th>Student name</th><th>Issue type</th><th>Seat or location</th><th>Details</th></tr></thead>
-          <tbody>{issueReports.map((report) => (
-            <tr key={`print-issue-${report.id}`}>
-              <td>{formatDateTime(report.created_at)}</td><td>{report.student_id ?? "—"}</td>
-              <td>{report.student_name ?? "—"}</td><td>{report.category}</td>
-              <td>{report.seat_name ?? "—"}</td><td>{report.details}</td>
-            </tr>
-          ))}</tbody>
-        </table>
+        <header className="analytics-print-header">
+          <h1>Scan2Seat Usage &amp; Analytics</h1>
+          <p>Library seat activity report</p>
+          <div className="analytics-print-meta">
+            <span><strong>Generated:</strong> {formatDateTime(now)}</span>
+            <span><strong>Date range:</strong> {printableDateRange}</span>
+            <span><strong>Section:</strong> {printableSectionFilter}</span>
+            <span><strong>Seat search:</strong> {seatSearch.trim() || "All seats"}</span>
+            <span><strong>Student search:</strong> {studentSearch.trim() || "All students"}</span>
+          </div>
+        </header>
+        <section className="analytics-print-section analytics-print-summary">
+          <h2>At a glance</h2>
+          <p className="analytics-print-note">A check-in is one recorded seat session. Study time and average duration include completed sessions only.</p>
+          <table>
+            <thead><tr><th>Measure</th><th>Result</th><th>How to understand it</th></tr></thead>
+            <tbody>
+              <tr><td>Recorded check-ins</td><td>{records.length}</td><td>Seat sessions matching the selected filters.</td></tr>
+              <tr><td>Completed sessions</td><td>{completedRecords.length}</td><td>Sessions with a recorded check-out.</td></tr>
+              <tr><td>Active sessions</td><td>{printableActiveSessions}</td><td>Sessions currently in progress.</td></tr>
+              <tr><td>Completed study time</td><td>{formatExportDuration(completedDurations.length ? completedDurations.reduce((sum, value) => sum + value, 0) : null)}</td><td>Total duration of completed sessions; active time is not included.</td></tr>
+              <tr><td>Average completed session</td><td>{formatDuration(averageStudyMinutes)}</td><td>Average duration for completed sessions only.</td></tr>
+              <tr><td>Most-used section</td><td>{enoughPeakData && topSection ? topSection.names.join(", ") : "Not enough recorded data"}</td><td>{enoughPeakData && topSection ? `${topSection.count} matching check-ins.` : "At least two matching sessions are needed to identify a peak."}</td></tr>
+              <tr><td>Most-used seat</td><td>{enoughPeakData && highestSeat ? highestSeat.seatCode : "Not enough recorded data"}</td><td>{enoughPeakData && highestSeat ? `${highestSeat.count} matching sessions in ${highestSeat.section}.` : "At least two matching sessions are needed to identify a peak."}</td></tr>
+            </tbody>
+          </table>
+        </section>
+        <section className="analytics-print-section">
+          <h2>Usage by library section</h2>
+          <p className="analytics-print-note">Study time and averages use completed sessions. Sections with no check-ins are included.</p>
+          <table>
+            <thead><tr><th>Library section</th><th>Recorded check-ins</th><th>Completed sessions</th><th>Completed study time</th><th>Average completed session</th></tr></thead>
+            <tbody>{sectionRows.map((item) => (
+              <tr key={`print-section-${item.id}`}>
+                <td>{item.name}</td><td>{item.checkIns}</td><td>{item.completed}</td>
+                <td>{item.completed ? formatExportDuration(item.minutes) : "Not recorded"}</td>
+                <td>{item.average === null ? "Not recorded" : formatExportDuration(item.average)}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </section>
+        <section className="analytics-print-section">
+          <h2>Recorded seat usage</h2>
+          <p className="analytics-print-note">Past use does not mean a seat is occupied now. Status shows the current recorded state.</p>
+          <table>
+            <thead><tr><th>Seat</th><th>Library section</th><th>Recorded sessions</th><th>Study time</th><th>Current recorded status</th></tr></thead>
+            <tbody>{seatRowsForSearch.length ? seatRowsForSearch.map((item) => (
+              <tr key={`print-seat-${item.seatId}`}>
+                <td>{item.seatCode}</td><td>{item.section}</td><td>{item.count}</td>
+                <td>{item.count ? formatExportDuration(item.minutes) : "Not recorded"}</td><td>{item.status}</td>
+              </tr>
+            )) : <tr><td colSpan="5">No matching seat usage was recorded.</td></tr>}</tbody>
+          </table>
+        </section>
+        <section className="analytics-print-section">
+          <h2>When check-ins happen</h2>
+          <p className="analytics-print-note">Uses local check-in time. Morning is 5:00–11:59, afternoon is 12:00–16:59, and evening is 17:00–4:59.</p>
+          <table>
+            <thead><tr><th>Grouping</th><th>Time period</th><th>Recorded check-ins</th></tr></thead>
+            <tbody>
+              {[...periodCounts.entries()].map(([label, count]) => (
+                <tr key={`print-period-${label}`}><td>Time of day</td><td>{label}</td><td>{count}</td></tr>
+              ))}
+              {weekdays.flatMap((label) => {
+                const count = dayCounts.get(label);
+                return count ? [<tr key={`print-day-${label}`}><td>Day of week</td><td>{label}</td><td>{count}</td></tr>] : [];
+              })}
+              {monthlyTrendRows.map(([key, count]) => (
+                <tr key={`print-month-${key}`}>
+                  <td>Month</td>
+                  <td>{new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(new Date(`${key}-01T12:00:00`))}</td>
+                  <td>{count}</td>
+                </tr>
+              ))}
+              {!periodCounts.size && !dayCounts.size && !monthlyTrendRows.length && <tr><td colSpan="3">No matching check-ins were recorded.</td></tr>}
+            </tbody>
+          </table>
+        </section>
+        <section className="analytics-print-section analytics-print-records">
+          <h2>Individual study session records</h2>
+          <p className="analytics-print-note">Check-out is blank when a session is still active. Study time is shown as hours and minutes.</p>
+          <table>
+            <thead><tr><th>Student ID</th><th>Student name</th><th>Library section</th><th>Seat</th><th>Check-in</th><th>Check-out</th><th>Study time</th><th>Session status</th><th>Location status</th></tr></thead>
+            <tbody>{records.length ? records.map((item) => (
+              <tr key={`print-session-${item.id}`}>
+                <td>{item.studentId ?? item.userId ?? "Not recorded"}</td><td>{item.studentName ?? "Not recorded"}</td>
+                <td>{item.sectionName}</td><td>{item.seatCode}</td>
+                <td>{formatDateTime(item.checkInTime)}</td><td>{item.checkOutTime ? formatDateTime(item.checkOutTime) : "Not checked out"}</td>
+                <td>{formatExportDuration(item.duration)}</td><td>{item.isCompleted ? "Completed" : "Active"}</td>
+                <td>{item.locationStatus ?? "Not recorded"}</td>
+              </tr>
+            )) : <tr><td colSpan="9">No matching sessions were recorded.</td></tr>}</tbody>
+          </table>
+        </section>
+        <section className="analytics-print-section analytics-print-records">
+          <h2>Student issue reports</h2>
+          <p className="analytics-print-note">These reports are not filtered by the session date, section, seat, or student filters.</p>
+          <table>
+            <thead><tr><th>Submitted</th><th>Student ID</th><th>Student name</th><th>Issue type</th><th>Seat or location</th><th>Report details</th></tr></thead>
+            <tbody>{issueReports.length ? issueReports.map((report) => (
+              <tr key={`print-issue-${report.id}`}>
+                <td>{formatDateTime(report.created_at)}</td><td>{report.student_id ?? "Not recorded"}</td>
+                <td>{report.student_name ?? "Not recorded"}</td><td>{report.category}</td>
+                <td>{report.seat_name ?? "Not provided"}</td><td>{report.details}</td>
+              </tr>
+            )) : <tr><td colSpan="6">{issueReportsError || "No student issue reports were submitted."}</td></tr>}</tbody>
+          </table>
+        </section>
       </section>
       <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
@@ -1072,12 +1359,14 @@ export default function AdminAnalytics() {
           <div className="flex shrink-0 flex-wrap gap-2">
             <button
               type="button"
-              onClick={exportCsv}
-              disabled={customRangeInvalid}
+              onClick={exportWorkbook}
+              disabled={customRangeInvalid || exportingWorkbook}
               className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#DDE3F2] bg-white px-3 text-sm font-semibold text-[#140B63] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Download className="h-4 w-4" aria-hidden="true" />
-              Export Excel CSV
+              {exportingWorkbook
+                ? <RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" />
+                : <Download className="h-4 w-4" aria-hidden="true" />}
+              {exportingWorkbook ? "Preparing workbook…" : "Export Excel Workbook"}
             </button>
             <button
               type="button"

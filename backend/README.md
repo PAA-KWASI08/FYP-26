@@ -14,6 +14,8 @@ Apply the student authentication migrations, then deploy the `student-login` Edg
 
 The first successful login is restricted to a password-change page until the user chooses a replacement password of at least 8 characters, including uppercase and lowercase letters, a number, and a symbol. Password changes are processed by Supabase Auth; `public.users` stores only the `must_change_password` setup flag, never the password or PIN. Students can later change their password from Student Profile; administrators can use the account control in the admin header. Password recovery is not configured for these internal demo accounts.
 
+The student sign-in page contains a clearly labeled, non-functional preview of the planned recovery flow. The future flow is: a student requests recovery; the library administrator checks and approves the active student account; the system sends a time-limited reset link to that student's own verified recovery email; the student sets a new password. Student database accounts currently have reserved `.invalid` Auth emails, so recovery stays disabled until unique real student emails are linked and Supabase Auth email delivery and reset-link handling are configured. The prototype recovery preview does not submit requests, check account status, send email, or change passwords.
+
 The service-role key is used only by this local provisioning script and Supabase-managed Edge Function secrets. Never put it in React source, Vite-exposed environment variables, browser code, client-side requests, committed documentation, or version control. The Edge Function uses Supabase's server-side `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_ANON_KEY` secrets.
 
 ## Student check-in and check-out
@@ -44,6 +46,10 @@ node backend/scripts/reset-admin-password.mjs admin001
 ```
 
 The script prompts for the service-role key without echoing it, requires a new one-time password, and forces the admin to change it again on next login. Do not commit the generated password to source, screenshots, or shared logs.
+
+The admin sign-in page includes a clearly labeled, non-functional preview of the planned recovery flow. It does not submit or store requests, verify identities, send email, or change passwords. Until a unique verified recovery email is linked to every admin account, a super-admin mailbox and approval process are configured, and Supabase Auth email delivery is enabled, maintainers must use the trusted-terminal reset procedure above and deliver the temporary password privately after independently verifying the administrator.
+
+The planned recovery flow is: an admin submits a request; the system notifies one super-admin mailbox; the super-admin confirms that the ID belongs to an active admin account and approves the request; the system sends a time-limited password-reset link to that admin's own verified recovery email; the admin uses the link to choose a new password. The shared super-admin mailbox is for review notifications only and must not be used as the recovery email for every admin. Never trust an email address supplied in a request or expose whether an admin ID or email exists.
 
 To apply the migrations and deploy the login function, run these from the `backend` directory after linking the intended Supabase project:
 

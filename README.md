@@ -8,6 +8,19 @@ Student check-in requests a recent device location and checks it against a 30 m 
 
 These checks depend on browser location permission, device positioning, network availability, and the student page remaining open to report movement. Device/browser locations can be inaccurate or spoofed; the point is not a surveyed building outline, so this is not tamper-proof proof of physical presence or an institutional production attestation.
 
+## Deploy to GitHub Pages
+
+The `Deploy to GitHub Pages` workflow publishes the Vite app from the `main` branch to `https://paa-kwasi08.github.io/FYP-26/`. It also creates a `404.html` fallback so client-side routes continue to work when opened directly or refreshed.
+
+Before deploying:
+
+1. In the GitHub repository, add Actions repository secrets named `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. Use the Supabase project URL and its public publishable/anon key; never use a service-role key in a client-side build.
+2. In **Settings → Pages**, set the build and deployment source to **GitHub Actions**.
+3. In Supabase **Authentication → URL Configuration**, set the Site URL to `https://paa-kwasi08.github.io/FYP-26/` and allow the deployed Pages URL for redirects.
+4. Merge the deployment workflow into `main`, or run it manually from the repository's **Actions** tab.
+
+For a local Pages-path build, set `GITHUB_PAGES=true` and run `npm run build:pages`. Ordinary `npm run dev` and `npm run build` continue to use the root path.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

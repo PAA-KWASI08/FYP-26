@@ -29,7 +29,7 @@ const AdminAnalytics = lazy(() => import("./AdminAnalytics"));
 
 ReactDOM.createRoot(document.getElementById("root")).render(
    <React.StrictMode>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
          <AuthProvider>
           <StudentSessionProvider>
             <Suspense fallback={<div className="p-6 text-center text-sm text-gray-600">Loading page…</div>}>

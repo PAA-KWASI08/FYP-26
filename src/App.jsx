@@ -19,8 +19,8 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [showForgotPin, setShowForgotPin] = useState(false);
+  const [resetPreviewStep, setResetPreviewStep] = useState(0);
   const [resetUserId, setResetUserId] = useState("");
-  const [resetEmail, setResetEmail] = useState("");
   const [resetMessage, setResetMessage] = useState("");
   const [resetNotification, setResetNotification] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -61,6 +61,7 @@ export default function App() {
   const handleForgotPin = () => {
     setLoginError("");
     setShowForgotPin(true);
+    setResetPreviewStep(0);
     setResetMessage("");
     setResetNotification("");
 
@@ -79,7 +80,7 @@ export default function App() {
 
     if (databaseStudentIdSet.has(resetUserId)) {
       setShowForgotPin(false);
-      setResetNotification("Password recovery is not configured for database accounts. Contact the library administrator.");
+      setResetNotification("Password recovery is not enabled for this account yet. Contact the library administrator.");
       return;
     }
 
@@ -89,13 +90,7 @@ export default function App() {
       return;
     }
 
-    if (!resetEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resetEmail)) {
-      setResetMessage("Enter a valid email address to receive the prototype reset link.");
-      return;
-    }
-
-    setShowForgotPin(false);
-    setResetNotification("Reset email delivery is not configured for prototype accounts. No reset link was sent.");
+    setResetPreviewStep(1);
   };
 
   const handleLogin = async () => {
@@ -251,51 +246,124 @@ export default function App() {
           </button>
           {showForgotPin && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#140B63]/70 p-4 backdrop-blur-sm">
-              <div className="w-full max-w-md rounded-2xl border border-white/20 bg-[#140B63] p-5 text-left text-white shadow-2xl">
+              <section
+                className="w-full max-w-md rounded-2xl border border-white/20 bg-[#140B63] p-5 text-left text-white shadow-2xl"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="student-reset-title"
+              >
                 <div className="mb-4 flex items-center justify-between gap-3">
-                  <h3 className="text-lg font-semibold">Reset prototype PIN</h3>
+                  <h3 id="student-reset-title" className="text-lg font-semibold">
+                    {resetPreviewStep === 0
+                      ? "Reset password / PIN"
+                      : resetPreviewStep === 1
+                        ? "Request submitted · preview"
+                        : resetPreviewStep === 2
+                          ? "Student account approved · preview"
+                          : "Student resets password · preview"}
+                  </h3>
                   <button
                     type="button"
-                    onClick={() => setShowForgotPin(false)}
+                    onClick={() => {
+                      setShowForgotPin(false);
+                      setResetPreviewStep(0);
+                    }}
                     className="rounded-full border border-white/30 px-2 py-1 text-xs text-white/80 hover:bg-white/10"
                     aria-label="Close reset popup"
                   >
                     Close
                   </button>
                 </div>
-                <label className="mb-2 block text-xs font-medium text-white/80">
-                  Student ID
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={resetUserId}
-                    onChange={(event) => setResetUserId(event.target.value)}
-                    placeholder="Enter 8-digit Student ID"
-                    className="mt-1 w-full h-[40px] rounded border border-white/30 bg-[#B9D9EB]/20 px-3 text-white placeholder:text-white/50 outline-none focus:border-[#F47C5C]"
-                  />
-                </label>
-                <label className="mb-3 block text-xs font-medium text-white/80">
-                  Email
-                  <input
-                    type="email"
-                    value={resetEmail}
-                    onChange={(event) => setResetEmail(event.target.value)}
-                    placeholder="you@example.com"
-                    className="mt-1 w-full h-[40px] rounded border border-white/30 bg-[#B9D9EB]/20 px-3 text-white placeholder:text-white/50 outline-none focus:border-[#F47C5C]"
-                  />
-                </label>
-                <button
-                  type="button"
-                  onClick={handleResetLink}
-                  className="w-full h-[40px] rounded bg-[#F47C5C] font-semibold text-white hover:bg-[#f26d4d]"
-                >
-                  Send Reset Link
-                </button>
-              </div>
+                <p className="mb-4 rounded border border-amber-200/50 bg-amber-100/10 p-2 text-xs font-semibold text-amber-100">
+                  Prototype preview only. Nothing is sent, saved, or changed.
+                </p>
+                {resetPreviewStep === 0 && (
+                  <>
+                    <p className="mb-3 text-xs leading-relaxed text-white/80">
+                      Preview the planned recovery flow for a prototype student account. Your request would go to the library administrator for review.
+                    </p>
+                    <label className="mb-2 block text-xs font-medium text-white/80">
+                      Student ID
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={resetUserId}
+                        onChange={(event) => setResetUserId(event.target.value)}
+                        placeholder="Enter 8-digit Student ID"
+                        className="mt-1 w-full h-[40px] rounded border border-white/30 bg-[#B9D9EB]/20 px-3 text-white placeholder:text-white/50 outline-none focus:border-[#F47C5C]"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleResetLink}
+                      className="w-full h-[40px] rounded bg-[#F47C5C] font-semibold text-white hover:bg-[#f26d4d]"
+                    >
+                      Preview reset request
+                    </button>
+                  </>
+                )}
+                {resetPreviewStep === 1 && (
+                  <div role="status">
+                    <p className="text-sm font-semibold">The finished system would send this request to the library administrator for review.</p>
+                    <p className="mt-2 text-xs leading-relaxed text-white/80">
+                      The administrator would confirm that this is an active student account before approving password recovery.
+                    </p>
+                    <p className="mt-2 text-xs text-amber-100">
+                      Demo only: no account was checked, no request was submitted, and no email was sent.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setResetPreviewStep(2)}
+                      className="mt-4 w-full h-[40px] rounded bg-white font-semibold text-[#140B63] hover:bg-white/90"
+                    >
+                      Preview administrator approval
+                    </button>
+                  </div>
+                )}
+                {resetPreviewStep === 2 && (
+                  <div role="status">
+                    <p className="text-sm font-semibold">Administrator approved · preview</p>
+                    <p className="mt-2 text-xs leading-relaxed text-white/80">
+                      After confirming that this is an active student account, the administrator would approve the request. The system would then send a secure, time-limited password-reset link to the student's own verified email address already on the account.
+                    </p>
+                    <p className="mt-2 text-xs text-amber-100">
+                      Demo only: no account was checked, no request was approved, and no email was sent.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setResetPreviewStep(3)}
+                      className="mt-4 w-full h-[40px] rounded bg-white font-semibold text-[#140B63] hover:bg-white/90"
+                    >
+                      Preview student reset-link step
+                    </button>
+                  </div>
+                )}
+                {resetPreviewStep === 3 && (
+                  <div role="status">
+                    <p className="text-sm font-semibold">Student resets password · preview</p>
+                    <p className="mt-2 text-xs leading-relaxed text-white/80">
+                      The student would open the one-time link from their own verified email and choose a new password on the secure reset page.
+                    </p>
+                    <p className="mt-2 text-xs text-amber-100">
+                      Demo only: the link is simulated; no email was sent and no password or PIN was changed.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowForgotPin(false);
+                        setResetPreviewStep(0);
+                      }}
+                      className="mt-4 w-full h-[40px] rounded bg-white font-semibold text-[#140B63] hover:bg-white/90"
+                    >
+                      Finish preview
+                    </button>
+                  </div>
+                )}
+                {resetMessage && (
+                  <p className="mt-3 text-xs text-rose-200" role="alert">{resetMessage}</p>
+                )}
+              </section>
             </div>
-          )}
-          {resetMessage && (
-            <p className="text-xs text-white/80" role="alert">{resetMessage}</p>
           )}
           {loginError && (
             <p className="text-sm text-center text-white" role="alert">{loginError}</p>
